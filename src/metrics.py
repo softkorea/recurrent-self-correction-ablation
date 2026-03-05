@@ -1,0 +1,204 @@
+"""측정 모듈 — 실험 메트릭 계산.
+
+Gemini review 반영: compute_all_metrics 단일 패스 (O(N) → O(N) from O(6N)).
+뉴런 중요도 분석 함수 추가.
+"""
+
+import numpy as np
+from src.training import softmax, evaluate_accuracy_at_timestep
+
+
+def compute_correction_gain(net, X, y):
+    """correction_gain = acc_t3 - acc_t1."""
+    acc_t1 = evaluate_accuracy_at_timestep(net, X, y, t=1)
+    acc_t3 = evaluate_accuracy_at_timestep(net, X, y, t=3)
+    return acc_t3 - acc_t1
+
+
+def compute_recurrent_contribution_norm(net, X):
+    """||W_rec @ feedback|| 평균 (t=2, t=3에서의 피드백 기여 크기)."""
+    norms = []
+    for i in range(len(X)):
+        outputs, caches = net.forward_sequence(X[i], T=3)
+        for t in [1, 2]:
+            feedback = caches[t]['feedback']
+            contrib = feedback @ net.W_rec
+            norms.append(np.linalg.norm(contrib))
+    return float(np.mean(norms))
+
+
+def compute_step_delta(net, X):
+    """||y_t - y_{t-1}|| 평균 (t=2,3에서의 출력 변화량)."""
+    deltas = []
+    for i in range(len(X)):
+        outputs, _ = net.forward_sequence(X[i], T=3)
+        for t in range(1, 3):
+            delta = np.linalg.norm(outputs[t] - outputs[t - 1])
+            deltas.append(delta)
+    return float(np.mean(deltas))
+
+
+def compute_ece(net, X, y, n_bins=10):
+    """Expected Calibration Error.
+
+    softmax 최대값을 confidence로 사용.
+    """
+    confidences = []
+    accuracies = []
+
+    for i in range(len(X)):
+        outputs, _ = net.forward_sequence(X[i], T=3)
+        probs = softmax(outputs[2])
+        conf = np.max(probs)
+        pred = np.argmax(probs)
+        true = np.argmax(y[i])
+        confidences.append(conf)
+        accuracies.append(float(pred == true))
+
+    confidences = np.array(confidences)
+    accuracies = np.array(accuracies)
+
+    bin_boundaries = np.linspace(0, 1, n_bins + 1)
+    ece = 0.0
+    for b in range(n_bins):
+        lo, hi = bin_boundaries[b], bin_boundaries[b + 1]
+        mask = (confidences > lo) & (confidences <= hi)
+        if mask.sum() == 0:
+            continue
+        avg_conf = confidences[mask].mean()
+        avg_acc = accuracies[mask].mean()
+        ece += mask.sum() / len(X) * abs(avg_acc - avg_conf)
+
+    return float(ece)
+
+
+def compute_all_metrics(net, X, y):
+    """단일 패스로 모든 메트릭을 계산.
+
+    Gemini review 반영: forward_sequence를 샘플당 1회만 호출 (기존 6회 → 1회).
+
+    Returns:
+        dict with keys: acc_t1, acc_t2, acc_t3, gain, ece, r_norm, delta_norm
+    """
+    n = len(X)
+    correct_t1 = 0
+    correct_t2 = 0
+    correct_t3 = 0
+    r_norms = []
+    deltas = []
+    confidences = []
+    accuracies_for_ece = []
+
+    for i in range(n):
+        outputs, caches = net.forward_sequence(X[i], T=3)
+        true_cls = np.argmax(y[i])
+
+        # accuracy at each timestep
+        if np.argmax(outputs[0]) == true_cls:
+            correct_t1 += 1
+        if np.argmax(outputs[1]) == true_cls:
+            correct_t2 += 1
+        if np.argmax(outputs[2]) == true_cls:
+            correct_t3 += 1
+
+        # recurrent contribution norm (t=2, t=3)
+        for t in [1, 2]:
+            feedback = caches[t]['feedback']
+            contrib = feedback @ net.W_rec
+            r_norms.append(np.linalg.norm(contrib))
+
+        # step delta (t=2, t=3)
+        for t in range(1, 3):
+            deltas.append(np.linalg.norm(outputs[t] - outputs[t - 1]))
+
+        # ECE data (t=3)
+        probs = softmax(outputs[2])
+        confidences.append(np.max(probs))
+        accuracies_for_ece.append(float(np.argmax(outputs[2]) == true_cls))
+
+    acc_t1 = correct_t1 / n
+    acc_t2 = correct_t2 / n
+    acc_t3 = correct_t3 / n
+    gain = acc_t3 - acc_t1
+
+    # ECE
+    confidences = np.array(confidences)
+    accuracies_for_ece = np.array(accuracies_for_ece)
+    bin_boundaries = np.linspace(0, 1, 11)
+    ece = 0.0
+    for b in range(10):
+        lo, hi = bin_boundaries[b], bin_boundaries[b + 1]
+        mask = (confidences > lo) & (confidences <= hi)
+        if mask.sum() == 0:
+            continue
+        ece += mask.sum() / n * abs(accuracies_for_ece[mask].mean() - confidences[mask].mean())
+
+    return {
+        'acc_t1': float(acc_t1),
+        'acc_t2': float(acc_t2),
+        'acc_t3': float(acc_t3),
+        'gain': float(gain),
+        'ece': float(ece),
+        'r_norm': float(np.mean(r_norms)),
+        'delta_norm': float(np.mean(deltas)),
+    }
+
+
+# ──────────────────────────────────────────────
+# Neuron Importance (Heatmap 데이터 생성)
+# ──────────────────────────────────────────────
+
+def compute_neuron_importance(net, X, y):
+    """각 히든 뉴런의 intelligence / self-correction 중요도 측정.
+
+    Intelligence importance: acc_t1 하락량 (뉴런 전체 타임스텝 ablation)
+    Correction importance: correction_gain 하락량 (뉴런 전체 타임스텝 ablation)
+
+    Returns:
+        intelligence: dict {neuron_id: importance}
+        correction: dict {neuron_id: importance}
+    """
+    baseline = compute_all_metrics(net, X, y)
+    baseline_acc_t1 = baseline['acc_t1']
+    baseline_gain = baseline['gain']
+
+    intelligence = {}
+    correction = {}
+
+    # Hidden1 뉴런 (0~9)
+    for idx in range(net.hidden1):
+        # 가중치 저장
+        col_ih1 = net.W_ih1[:, idx].copy()
+        col_rec = net.W_rec[:, idx].copy()
+        b_h1_val = net.b_h1[idx]
+
+        # Ablation: incoming weights → 0
+        net.W_ih1[:, idx] = 0.0
+        net.W_rec[:, idx] = 0.0
+        net.b_h1[idx] = 0.0
+
+        m = compute_all_metrics(net, X, y)
+        intelligence[f'h1_{idx}'] = baseline_acc_t1 - m['acc_t1']
+        correction[f'h1_{idx}'] = baseline_gain - m['gain']
+
+        # 복원
+        net.W_ih1[:, idx] = col_ih1
+        net.W_rec[:, idx] = col_rec
+        net.b_h1[idx] = b_h1_val
+
+    # Hidden2 뉴런 (0~9)
+    for idx in range(net.hidden2):
+        col_h1h2 = net.W_h1h2[:, idx].copy()
+        b_h2_val = net.b_h2[idx]
+
+        net.W_h1h2[:, idx] = 0.0
+        net.b_h2[idx] = 0.0
+
+        m = compute_all_metrics(net, X, y)
+        intelligence[f'h2_{idx}'] = baseline_acc_t1 - m['acc_t1']
+        correction[f'h2_{idx}'] = baseline_gain - m['gain']
+
+        net.W_h1h2[:, idx] = col_h1h2
+        net.b_h2[idx] = b_h2_val
+
+    return intelligence, correction
