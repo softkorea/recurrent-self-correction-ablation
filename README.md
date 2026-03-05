@@ -59,7 +59,7 @@ Our reported configuration (w1=0.0, w2=0.2, τ=2.0) ranks **13th/80** — a mid-
 
 ```
 ├── CLAUDE.md                          # Experiment constraints & rules
-├── plan.md                            # Detailed experiment plan
+├── plan.md                            # Detailed experiment plan (Korean)
 ├── src/
 │   ├── network.py                     # RecurrentMLP (35 neurons)
 │   ├── training.py                    # 3-step unroll backprop + SGD
@@ -75,8 +75,10 @@ Our reported configuration (w1=0.0, w2=0.2, τ=2.0) ranks **13th/80** — a mid-
 │   ├── run_experiment.py              # Full experiment (10 models × 7 groups × 6 noise levels)
 │   └── sweep_hyperparams.py           # Hyperparameter robustness sweep
 └── results/
-    ├── REPORT.md                      # Main experiment report
-    ├── REPORT_SWEEP.md                # Hyperparameter sweep analysis
+    ├── REPORT.md                      # Main experiment report (Korean)
+    ├── REPORT.en.md                   # Main experiment report (English)
+    ├── REPORT_SWEEP.md                # Hyperparameter sweep analysis (Korean)
+    ├── REPORT_SWEEP.en.md             # Hyperparameter sweep analysis (English)
     ├── raw_metrics.csv                # Full raw data (3,900 rows)
     ├── sweep_hyperparams.csv          # Sweep raw data (800 rows)
     ├── ablation_comparison.png        # Group comparison bar chart
