@@ -41,6 +41,8 @@ paper/*.synctex*
 paper/*.fls
 paper/*.fdb_latexmk
 paper/tmlr.sty
+paper/tmlr.bst
+paper/tmlr.cls
 
 # Claude Code
 .claude/

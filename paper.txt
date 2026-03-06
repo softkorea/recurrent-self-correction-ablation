@@ -125,7 +125,7 @@ Under the reported hyperparameters (w1 = 0.0, w2 = 0.2, τ = 2.0), the Baseline 
 
 **Structured ablation (Group B2)**: The h2-to-output pathway ablation caused catastrophic degradation (accuracy at t=1 = 0.199 ± 0.032), confirming that not all ablations are equal — structured damage to the feedforward pathway is qualitatively different from recurrent ablation.
 
-**Parameter-matched feedforward (Group D’)**: This model achieved the highest t=1 accuracy (0.822 ± 0.031), demonstrating that additional parameters do improve initial pattern recognition. However, correction gain was exactly 0.000 ± 0.000. Additional capacity without recurrent structure produces no self-correction whatsoever.
+**Parameter-matched feedforward (Group D’)**: This model achieved the highest t=1 accuracy (0.822 ± 0.031), demonstrating that additional parameters do improve initial pattern recognition. However, correction gain was exactly 0.000 ± 0.000 (a structural certainty given the static input and lack of recurrence). Additional capacity without recurrent structure produces no self-correction whatsoever.
 
 ### 3.3 The Fake Mirror Effect
 
@@ -141,7 +141,7 @@ The gradient of degradation across feedback conditions is revealing:
 - **Group C1** (shuffled feedback): gain = −0.064. Harmful.
 - **Group C2** (clone feedback): gain = −0.075. At least as harmful.
 
-To directly test the claim that wrong feedback is worse than no feedback, we performed paired Wilcoxon signed-rank tests comparing C1 and C2 against A. Both comparisons were significant: C1 vs A (exact p = 0.0039, 95% CI of difference [−0.095, −0.036]) and C2 vs A (exact p = 0.0020, 95% CI [−0.095, −0.058]). This confirms that non-veridical feedback actively degrades performance below the no-feedback baseline.
+To directly test the claim that wrong feedback is worse than no feedback, we performed paired Wilcoxon signed-rank tests comparing C1 and C2 against A. Both comparisons were significant: C1 vs A (exact p = 0.0039, 95% CI of difference [−0.095, −0.036]) and C2 vs A (exact p = 0.0020, 95% CI [−0.095, −0.058]). Note that the C1 vs A CI is identical to C1's standalone CI because Group A's gain is strictly zero for all 10 models, so the paired difference reduces to C1's own distribution; the same logic applies to C2 vs A. This confirms that non-veridical feedback actively degrades performance below the no-feedback baseline.
 
 That C2 degrades performance despite providing in-distribution feedback has a mechanistic explanation. The recurrent weights (W_rec) are co-adapted to the model’s own specific feedforward feature detectors during training. Clone feedback, though well-formed, activates these co-adapted weights with a structured but misaligned signal, pushing the hidden state into a coherent but incorrect region of the model’s latent space. Because the clone’s output is a plausible classification vector — unlike shuffled feedback, which is partially incoherent — the recurrent pathway processes it as a reliable self-signal and follows it into systematically wrong corrections.
 
@@ -216,6 +216,8 @@ Fifth, the parameter-matched feedforward model (Group D’) achieved higher abso
 Sixth, the robustness analysis, while extensive (800 runs), explored only three hyperparameters. Other factors — network depth, activation function, learning rate schedule — may influence emergence in ways we have not characterized.
 
 Seventh, our use of static inputs cleanly separates self-correction from memory, but in autoregressive language models and biological systems, the recurrent pathway must simultaneously manage temporal memory (past inputs) and self-reflection (past outputs). How these two functions compete for recurrent bandwidth — and whether one can be suppressed without degrading the other — remains an open question for future work.
+
+Eighth, the C2 clone pairing uses a fixed ring assignment (model *i* paired with model *(i+1) mod 10*), which introduces a weak statistical dependency: each model appears once as target and once as clone donor, so the 10 paired observations are not fully independent. A fully independent design would require 20 separately trained models (10 targets + 10 donors). Given the strong effect size (p = 0.0020) and consistent direction across all 10 pairs, this dependency is unlikely to qualitatively affect the conclusion, but we note it for completeness.
 
 -----
 

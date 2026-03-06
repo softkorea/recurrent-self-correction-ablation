@@ -119,6 +119,8 @@ pytest tests/ -v
 
 ### Reproduce All Results
 
+> **Warning**: Each experiment script overwrites `results/raw_metrics.csv` (and other result files). If you want to preserve existing results, back up the `results/` directory before re-running.
+
 ```bash
 # Main experiment (~1 hour on modern CPU)
 python experiments/run_experiment.py
