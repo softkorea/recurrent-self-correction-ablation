@@ -30,6 +30,7 @@ FEEDBACK_paper.md
 plan.md
 REVIEW_PACKAGE.md
 REFERENCES_URLS.md
+UNDERSTANDING_GUIDE.md
 
 # LaTeX build artifacts
 paper/*.aux
