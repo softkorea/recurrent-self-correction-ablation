@@ -102,9 +102,9 @@ def run_single_model(args):
         rows.append(make_row('B1', compute_all_metrics(net, X_test, y_test), seed_abl + 1000))
         restore_weights(net, saved)
 
-    # Group B2: 구조적 절단
+    # Group B2: 구조적 절단 (h2_to_output, 50 params = W_rec과 동일)
     saved = deep_copy_weights(net)
-    ablate_structural(net, layer='h1_to_h2')
+    ablate_structural(net, layer='h2_to_output')
     rows.append(make_row('B2', compute_all_metrics(net, X_test, y_test)))
     restore_weights(net, saved)
 

@@ -106,11 +106,13 @@ def forward_sequence_with_clone(target_net, clone_net, x, T=3):
 
     Returns:
         target_outputs: list of T output vectors from target_net
+        target_caches: list of T cache dicts from target_net
     """
     target_net.reset_state()
     clone_net.reset_state()
 
     target_outputs = []
+    target_caches = []
     clone_outputs = []
 
     for t in range(T):
@@ -123,8 +125,9 @@ def forward_sequence_with_clone(target_net, clone_net, x, T=3):
 
         target_y = target_net.forward(x)
         target_outputs.append(target_y.copy())
+        target_caches.append(target_net._cache.copy())
 
-    return target_outputs
+    return target_outputs, target_caches
 
 
 # ──────────────────────────────────────────────

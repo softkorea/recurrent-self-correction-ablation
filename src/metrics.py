@@ -162,7 +162,7 @@ def compute_all_metrics_with_clone(target_net, clone_net, X, y):
     accuracies_for_ece = []
 
     for i in range(n):
-        outputs = forward_sequence_with_clone(target_net, clone_net, X[i], T=3)
+        outputs, caches = forward_sequence_with_clone(target_net, clone_net, X[i], T=3)
         true_cls = np.argmax(y[i])
 
         if np.argmax(outputs[0]) == true_cls:
@@ -172,9 +172,9 @@ def compute_all_metrics_with_clone(target_net, clone_net, X, y):
         if np.argmax(outputs[2]) == true_cls:
             correct_t3 += 1
 
-        # recurrent contribution norm — uses target's cache after clone-injected forward
+        # recurrent contribution norm (t=2, t=3) — uses per-timestep caches
         for t in [1, 2]:
-            feedback = target_net._cache.get('feedback', np.zeros(target_net.output_size))
+            feedback = caches[t]['feedback']
             contrib = feedback @ target_net.W_rec
             r_norms.append(np.linalg.norm(contrib))
 
@@ -288,8 +288,11 @@ def wilcoxon_exact(x, y):
 def compute_neuron_importance(net, X, y):
     """각 히든 뉴런의 intelligence / self-correction 중요도 측정.
 
-    Intelligence importance: acc_t1 하락량 (뉴런 전체 타임스텝 ablation)
-    Correction importance: correction_gain 하락량 (뉴런 전체 타임스텝 ablation)
+    H1 neurons: decoupled ablation to avoid intelligence→correction confound.
+      - Intelligence: ablate feedforward input (W_ih1 + bias) only, measure Δacc_t1
+      - Correction: ablate recurrent input (W_rec) only, measure Δgain
+    H2 neurons: full knockout (W_h1h2 + bias), since H2 has no direct W_rec input.
+      - Note: H2 correction importance may be confounded with intelligence importance.
 
     Returns:
         intelligence: dict {neuron_id: importance}
@@ -302,28 +305,32 @@ def compute_neuron_importance(net, X, y):
     intelligence = {}
     correction = {}
 
-    # Hidden1 뉴런 (0~9)
+    # Hidden1 뉴런 (0~9) — decoupled ablation
     for idx in range(net.hidden1):
-        # 가중치 저장
+        # 1. Intelligence: ablate feedforward input only (W_ih1 + bias)
         col_ih1 = net.W_ih1[:, idx].copy()
-        col_rec = net.W_rec[:, idx].copy()
         b_h1_val = net.b_h1[idx]
-
-        # Ablation: incoming weights → 0
         net.W_ih1[:, idx] = 0.0
-        net.W_rec[:, idx] = 0.0
         net.b_h1[idx] = 0.0
 
-        m = compute_all_metrics(net, X, y)
-        intelligence[f'h1_{idx}'] = baseline_acc_t1 - m['acc_t1']
-        correction[f'h1_{idx}'] = baseline_gain - m['gain']
+        m_intel = compute_all_metrics(net, X, y)
+        intelligence[f'h1_{idx}'] = baseline_acc_t1 - m_intel['acc_t1']
 
-        # 복원
+        # Restore feedforward
         net.W_ih1[:, idx] = col_ih1
-        net.W_rec[:, idx] = col_rec
         net.b_h1[idx] = b_h1_val
 
-    # Hidden2 뉴런 (0~9)
+        # 2. Correction: ablate recurrent input only (W_rec)
+        col_rec = net.W_rec[:, idx].copy()
+        net.W_rec[:, idx] = 0.0
+
+        m_corr = compute_all_metrics(net, X, y)
+        correction[f'h1_{idx}'] = baseline_gain - m_corr['gain']
+
+        # Restore recurrent
+        net.W_rec[:, idx] = col_rec
+
+    # Hidden2 뉴런 (0~9) — full knockout (no direct W_rec input)
     for idx in range(net.hidden2):
         col_h1h2 = net.W_h1h2[:, idx].copy()
         b_h2_val = net.b_h2[idx]

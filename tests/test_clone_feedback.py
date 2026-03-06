@@ -39,7 +39,7 @@ def test_clone_feedback_uses_different_model_output(two_trained_nets):
     normal_outputs, _ = target.forward_sequence(x, T=3)
 
     # Clone feedback forward
-    clone_outputs = forward_sequence_with_clone(target, clone, x, T=3)
+    clone_outputs, _ = forward_sequence_with_clone(target, clone, x, T=3)
 
     # t=1은 동일해야 함 (피드백 없음)
     assert np.allclose(normal_outputs[0], clone_outputs[0]), \
@@ -83,8 +83,8 @@ def test_clone_feedback_deterministic(two_trained_nets):
     target, clone = two_trained_nets
     x = np.random.RandomState(42).randn(10)
 
-    out1 = forward_sequence_with_clone(target, clone, x, T=3)
-    out2 = forward_sequence_with_clone(target, clone, x, T=3)
+    out1, _ = forward_sequence_with_clone(target, clone, x, T=3)
+    out2, _ = forward_sequence_with_clone(target, clone, x, T=3)
 
     for t in range(3):
         assert np.allclose(out1[t], out2[t]), \
@@ -102,7 +102,7 @@ def test_clone_vs_self_feedback():
     # Self-clone (same model as both target and clone)
     # Need a second copy since forward modifies state
     net2 = create_trained_network(seed=0, epochs=200, noise_level=0.3)
-    clone_outputs = forward_sequence_with_clone(net, net2, x, T=3)
+    clone_outputs, _ = forward_sequence_with_clone(net, net2, x, T=3)
 
     for t in range(3):
         assert np.allclose(normal_outputs[t], clone_outputs[t], atol=1e-10), \

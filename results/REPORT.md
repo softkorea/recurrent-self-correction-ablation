@@ -32,7 +32,7 @@ These results strongly support the hypothesis.
 | **Baseline** | 0.698±0.054 | 0.740±0.055 | **+0.042±0.030** | Self-correction occurs |
 | A (Recurrent Cut) | 0.698±0.054 | 0.698±0.054 | 0.000±0.000 | Correction completely lost |
 | B1 (Random Cut) | 0.515±0.048 | 0.511±0.037 | -0.004±0.016 | Correction lost + performance degraded |
-| B2 (Structural Cut) | 0.207±0.034 | 0.207±0.034 | 0.000±0.000 | Function destroyed |
+| B2 (Structural Cut) | 0.199±0.032 | 0.199±0.032 | 0.000±0.000 | Function destroyed |
 | C1 (Shuffled Feedback) | 0.698±0.054 | 0.634±0.041 | **-0.064±0.048** | Wrong feedback = degradation |
 | **C2 (Clone Feedback)** | 0.698±0.054 | 0.623±0.043 | **-0.075±0.030** | Other model's valid output = degradation |
 | D (Feedforward) | 0.746±0.067 | 0.746±0.067 | 0.000±0.000 | No correction possible (no recurrence) |
@@ -121,14 +121,18 @@ These results strongly support the hypothesis.
 
 ## 5. Neuron Importance Analysis
 
-From the Neuron Importance Heatmap:
+Using decoupled ablation for H1 (feedforward-only for intelligence, recurrent-only for correction):
 
-- **Upper-right (important for both intelligence + correction)**: h1_7, h1_8, h2_2, h2_9, h1_1
-  - These neurons are critical for both pattern recognition and self-correction
-- **Upper-left (important for correction only)**: h2_6, h2_7
-  - Low contribution to intelligence but specialized for self-correction
-- **Lower-right (important for intelligence only)**: h1_6, h2_0, h2_4
-  - Contribute to pattern recognition only; irrelevant or detrimental to correction
+- **Shared (high intelligence + high correction)**: h1_1, h1_5, h1_7
+  - Both feedforward and recurrent pathways contribute through these neurons
+- **Correction-specialized**: h1_8
+  - Moderate feedforward importance but high recurrent (correction) importance
+- **Intelligence-specialized**: h1_6
+  - High feedforward importance, zero recurrent contribution to correction
+- **Negative correction**: h1_9
+  - Removing its recurrent input *improves* correction gain (−0.035), suggesting this recurrent channel introduces noise
+
+Note: H2 neurons use full knockout (no direct W_rec input), so their correction importance may be confounded with intelligence importance. H2 neurons h2_1, h2_2, h2_9 show high values on both axes, and h2_6 appears correction-specialized, but these should be interpreted with this caveat.
 
 ## 6. Generated Files
 

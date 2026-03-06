@@ -112,7 +112,7 @@ We employed seven experimental conditions to isolate the contribution of self-re
 
 ### 2.5 Neuron Importance Analysis
 
-To quantify the contribution of individual neurons to pattern recognition and self-correction, we used single-neuron knockout analysis. For each hidden neuron, all incoming weights and its bias were set to zero, and the full metric suite was recomputed. Intelligence importance was defined as the drop in t=1 accuracy (Δacc_t1), measuring the neuron's contribution to initial pattern recognition. Correction importance was defined as the drop in correction gain (Δgain), measuring its contribution to self-correction. This analysis was performed on a single trained model (seed=0, noise=0.5) to generate a per-neuron importance heatmap.
+To quantify the contribution of individual neurons to pattern recognition and self-correction, we used decoupled single-neuron knockout analysis. For Hidden Layer 1 neurons (which receive both feedforward and recurrent input), intelligence and correction were measured separately: (a) intelligence importance was measured by zeroing only the feedforward incoming weights (W_ih1 column + bias), observing the drop in t=1 accuracy (Δacc_t1); (b) correction importance was measured by zeroing only the recurrent incoming weights (W_rec column), observing the drop in correction gain (Δgain). This decoupling prevents a confound where feedforward-critical neurons appear artificially important for correction simply because destroying their feedforward pathway also collapses the correction baseline. For Hidden Layer 2 neurons (which have no direct recurrent input), full knockout was used for both measures; we note that the intelligence-correction confound may still exist for these neurons. This analysis was performed on a single trained model (seed=0, noise=0.5) to generate a per-neuron importance heatmap.
 
 ### 2.6 Statistical Design
 
@@ -136,7 +136,7 @@ Under the reported hyperparameters (w1 = 0.0, w2 = 0.2, τ = 2.0), the Baseline 
 
 **Random ablation (Group B1)**: Mean gain = −0.004 ± 0.016. Accuracy at t=1 dropped substantially (0.515 ± 0.048), indicating general degradation. The correction mechanism was also lost, but this is confounded by the overall performance collapse.
 
-**Structured ablation (Group B2)**: The h2-to-output pathway ablation caused catastrophic degradation (accuracy at t=1 = 0.207 ± 0.034), confirming that not all ablations are equal — structured damage to the feedforward pathway is qualitatively different from recurrent ablation.
+**Structured ablation (Group B2)**: The h2-to-output pathway ablation caused catastrophic degradation (accuracy at t=1 = 0.199 ± 0.032), confirming that not all ablations are equal — structured damage to the feedforward pathway is qualitatively different from recurrent ablation.
 
 **Parameter-matched feedforward (Group D’)**: This model achieved the highest t=1 accuracy (0.822 ± 0.031), demonstrating that additional parameters do improve initial pattern recognition. However, correction gain was exactly 0.000 ± 0.000. Additional capacity without recurrent structure produces no self-correction whatsoever.
 
@@ -164,7 +164,7 @@ The correction gain varied with noise level, peaking at noise = 0.2 (gain ≈ +0
 
 ### 3.5 Neuron Overlap Analysis
 
-Individual neuron importance analysis revealed three functional groups: neurons important primarily for initial pattern recognition (intelligence-specialized), neurons important primarily for self-correction (correction-specialized), and neurons important for both (shared). Several neurons in hidden layer 1 (h1_7, h1_8, h1_1) and hidden layer 2 (h2_2, h2_9) showed high importance on both dimensions, indicating that the circuits supporting initial recognition and iterative correction are not fully separable at the neuron level. This functional overlap emerged without any explicit architectural modularity — the network self-organized its 35 neurons into partially overlapping functional groups through end-to-end training alone.
+Decoupled neuron importance analysis of Hidden Layer 1 — where feedforward and recurrent contributions can be cleanly separated — revealed three functional groups: neurons important primarily for initial pattern recognition (intelligence-specialized, e.g., h1_6), neurons whose recurrent input contributes primarily to self-correction (correction-specialized, e.g., h1_8), and neurons important for both (shared, e.g., h1_1, h1_5, h1_7). Notably, h1_9 showed *negative* correction importance (−0.035): removing its recurrent input *improved* correction gain, suggesting that not all recurrent channels contribute positively. For Hidden Layer 2 (where decoupling is not possible without timestep masking), full knockout was used; the intelligence-correction confound should be noted when interpreting these values.
 
 ### 3.6 Robustness
 
@@ -333,7 +333,7 @@ These results strongly support the hypothesis.
 | **Baseline** | 0.698±0.054 | 0.740±0.055 | **+0.042±0.030** | Self-correction occurs |
 | A (Recurrent Cut) | 0.698±0.054 | 0.698±0.054 | 0.000±0.000 | Correction completely lost |
 | B1 (Random Cut) | 0.515±0.048 | 0.511±0.037 | -0.004±0.016 | Correction lost + performance degraded |
-| B2 (Structural Cut) | 0.207±0.034 | 0.207±0.034 | 0.000±0.000 | Function destroyed |
+| B2 (Structural Cut) | 0.199±0.032 | 0.199±0.032 | 0.000±0.000 | Function destroyed |
 | C1 (Shuffled Feedback) | 0.698±0.054 | 0.634±0.041 | **-0.064±0.048** | Wrong feedback = degradation |
 | **C2 (Clone Feedback)** | 0.698±0.054 | 0.623±0.043 | **-0.075±0.030** | Other model's valid output = degradation |
 | D (Feedforward) | 0.746±0.067 | 0.746±0.067 | 0.000±0.000 | No correction possible (no recurrence) |
@@ -422,14 +422,18 @@ These results strongly support the hypothesis.
 
 ## 5. Neuron Importance Analysis
 
-From the Neuron Importance Heatmap:
+Using decoupled ablation for H1 (feedforward-only for intelligence, recurrent-only for correction):
 
-- **Upper-right (important for both intelligence + correction)**: h1_7, h1_8, h2_2, h2_9, h1_1
-  - These neurons are critical for both pattern recognition and self-correction
-- **Upper-left (important for correction only)**: h2_6, h2_7
-  - Low contribution to intelligence but specialized for self-correction
-- **Lower-right (important for intelligence only)**: h1_6, h2_0, h2_4
-  - Contribute to pattern recognition only; irrelevant or detrimental to correction
+- **Shared (high intelligence + high correction)**: h1_1, h1_5, h1_7
+  - Both feedforward and recurrent pathways contribute through these neurons
+- **Correction-specialized**: h1_8
+  - Moderate feedforward importance but high recurrent (correction) importance
+- **Intelligence-specialized**: h1_6
+  - High feedforward importance, zero recurrent contribution to correction
+- **Negative correction**: h1_9
+  - Removing its recurrent input *improves* correction gain (−0.035), suggesting this recurrent channel introduces noise
+
+Note: H2 neurons use full knockout (no direct W_rec input), so their correction importance may be confounded with intelligence importance. H2 neurons h2_1, h2_2, h2_9 show high values on both axes, and h2_6 appears correction-specialized, but these should be interpreted with this caveat.
 
 ## 6. Generated Files
 
