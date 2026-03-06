@@ -19,12 +19,17 @@ build/
 .DS_Store
 Thumbs.db
 
-# Internal notes (not part of the experiment)
+# Internal notes and working documents (not for publication)
 emergence-suggestion.txt
 hyperparameter sweep.txt
 generate_source_tree.py
 generate_review_package.py
 source_tree.md
+CLAUDE.md
+FEEDBACK_paper.md
+plan.md
+REVIEW_PACKAGE.md
+REFERENCES_URLS.md
 
 # LaTeX build artifacts
 paper/*.aux
