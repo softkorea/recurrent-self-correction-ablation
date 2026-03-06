@@ -229,7 +229,7 @@ We note, as a closing reflection, that these results point to a principle worth 
 
 ## Data Availability
 
-All code, data, and analysis scripts are publicly available at https://github.com/softkorea/recurrent-self-correction-ablation. The experiment is implemented in pure NumPy and can be reproduced on any standard computer in under 30 minutes. Raw experimental data (3,960 primary rows + 800 sweep rows) are included as CSV files.
+All code, data, and analysis scripts are publicly available at https://github.com/softkorea/recurrent-self-correction-ablation. The experiment is implemented in pure NumPy and can be reproduced on a standard desktop computer in approximately one hour. Raw experimental data (3,960 primary rows + 800 sweep rows) are included as CSV files.
 
 -----
 
