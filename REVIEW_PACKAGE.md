@@ -1074,14 +1074,26 @@ For more precise p-values, the sample size (number of independent models) must b
 
 # REVIEW CHECKLIST
 
-Please verify the following:
+## A. Internal Validity
 
-1. **Internal Consistency**: Do all numbers in the paper match the corresponding report tables?
+1. **Internal Consistency**: Do all numbers in the paper (gains, CIs, p-values, accuracy) match the corresponding report tables and raw CSV data?
 2. **Statistical Methodology**: Is the Wilcoxon signed-rank exact test appropriate for N=10? Are bootstrap CIs correctly described? Is Holm-Bonferroni correction properly applied?
-3. **Controls Completeness**: Are Groups A, B1, B2, C1, C2, D, D' sufficient to rule out alternative explanations?
-4. **Overclaiming**: Are claims appropriately hedged? Does the language match the statistical evidence?
-5. **Clone Feedback Logic**: Does the C2 design genuinely rule out the OOD criticism? Are C1 vs C2 comparisons appropriately stated given p=0.695?
-6. **Robustness**: Does the hyperparameter sweep adequately address p-hacking concerns?
-7. **Missing Limitations**: Are there important caveats not mentioned?
-8. **Reproducibility**: Is enough detail provided to replicate the experiments?
-9. **Anthropomorphism**: Is mechanistic language used instead of anthropomorphic attributions?
+3. **Controls Completeness**: Are Groups A, B1, B2, C1, C2, D, D' sufficient to rule out alternative explanations? Are there missing controls?
+
+## B. Claims and Interpretation
+
+4. **Overclaiming**: Are claims appropriately hedged given the evidence? In particular, does the paper clearly distinguish what was demonstrated at 35-neuron scale from what might generalize?
+5. **Causal Claim Strength**: The paper uses "causal evidence" (Section 1.4) based on post-training ablation. Is this a valid causal intervention, or merely correlation-breaking? Does the ablation design support causal language?
+6. **Depth vs Self-Correction**: Group A maintains computational depth (3 timesteps) but gains = 0. Is this sufficient to argue that depth alone is not responsible? How does weight-shared depth (recurrent) differ from non-shared depth (deeper feedforward)?
+7. **Emergence vs Induction**: The time-weighted loss explicitly removes penalty for early errors, creating incentive for correction. Is this "emergence" or "induction"? How does this distinction affect the paper's claims? Does the paper acknowledge this honestly?
+
+## C. Methodology
+
+8. **Robustness**: Does the hyperparameter sweep (80 configs, 800 runs) adequately address p-hacking concerns? Is the emergence criterion (mean gain > 0, ≥60% models positive) well-justified?
+9. **Generalization Gap**: Train and test data are generated from the same prototype+noise procedure. Does this constitute a meaningful generalization test, or could the model simply memorize prototypes?
+10. **Neuron Importance H2 Confound**: For Hidden Layer 2, the intelligence-correction confound remains (full knockout used). How much does this limit the interpretation of Section 3.5?
+
+## D. Reproducibility and References
+
+11. **Reproducibility**: Is enough detail provided to replicate the experiments? Are all hyperparameters, dataset construction, and evaluation procedures fully specified?
+12. **Reference Validity**: Do all cited papers actually exist? Are author names, venues, and years correct? Does each citation accurately support the claim it is attached to?
