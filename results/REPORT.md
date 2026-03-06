@@ -1,41 +1,42 @@
-# Self-Awareness Ablation Experiment — Results Report
+# Self-Correction Ablation Experiment — Results Report
 
 ## Executive Summary
 
-35개 뉴런 RecurrentMLP에서 **자기 교정(Self-Correction) 현상의 창발(Emergence)을 확인**했다.
-Time-weighted loss와 temperature scaling 적용 후, Baseline correction gain = **+0.0415 ± 0.0295**
-(95% CI: [+0.023, +0.059], 0 불포함). 재귀 루프를 제거하면 gain이 정확히 0으로 떨어지며,
-피드백을 셔플하면 gain이 **-0.064**로 악화된다. 나아가 **다른 모델의 정상 출력**을
-피드백으로 주입해도 gain이 **-0.075**로 악화되어, 네트워크가 "아무 합리적 피드백"이 아닌
-**자기 자신의 출력 궤적**에 의존함을 증명한다. 이는 가설을 강하게 지지한다.
+We confirmed the **emergence of self-correction** in a 35-neuron RecurrentMLP.
+After applying time-weighted loss and temperature scaling, the Baseline correction gain = **+0.0415 ± 0.0295**
+(95% CI: [+0.023, +0.059], excluding zero). Removing the recurrent loop drops the gain to exactly 0,
+and shuffling the feedback worsens the gain to **-0.064**. Furthermore, injecting **another model's
+well-formed output** as feedback worsens the gain to **-0.075**, proving the network depends on
+**its own specific output trajectory**, not just any reasonable feedback signal.
+These results strongly support the hypothesis.
 
 ---
 
-## 1. 실험 설정
+## 1. Experimental Setup
 
-| 항목 | 값 |
-|------|------|
-| 아키텍처 | Input(10) → H1(10) → H2(10) → Output(5), 총 35 뉴런 |
-| 피드백 | tanh(prev_output / 2.0), temperature τ=2.0 |
-| Loss | Time-weighted: w=[0.0, 0.2, 1.0] (t=1 자유, t=3 집중) |
-| 학습 | Full-batch SGD, lr=0.01, 500 epochs, T=3 |
-| 데이터 | 정적 패턴 분류 (5 class, inter-class ambiguity 0.3) |
-| 독립 모델 | 10개 (seed 0~9) |
-| 노이즈 레벨 | [0.1, 0.2, 0.3, 0.5, 0.7, 1.0] |
-| 랜덤 반복 | B1: 30회, C1: 30회 (모델당) |
+| Item | Value |
+|------|-------|
+| Architecture | Input(10) → H1(10) → H2(10) → Output(5), 35 neurons total |
+| Feedback | tanh(prev_output / 2.0), temperature τ=2.0 |
+| Loss | Time-weighted: w=[0.0, 0.2, 1.0] (t=1 free, t=3 focused) |
+| Training | Full-batch SGD, lr=0.01, 500 epochs, T=3 |
+| Data | Static pattern classification (5 classes, inter-class ambiguity 0.3) |
+| Independent models | 10 (seed 0–9) |
+| Noise levels | [0.1, 0.2, 0.3, 0.5, 0.7, 1.0] |
+| Random repeats | B1: 30 per model, C1: 30 per model |
 
-## 2. 주요 결과 (noise=0.5, 모델 단위 집계 N=10)
+## 2. Main Results (noise=0.5, model-level aggregation N=10)
 
-| Group | acc_t1 | acc_t3 | gain (mean±std) | 해석 |
-|-------|--------|--------|-----------------|------|
-| **Baseline** | 0.698±0.054 | 0.740±0.055 | **+0.042±0.030** | 자기 교정 발생 |
-| A (재귀 절단) | 0.698±0.054 | 0.698±0.054 | 0.000±0.000 | 교정 완전 소실 |
-| B1 (랜덤 절단) | 0.515±0.048 | 0.511±0.037 | -0.004±0.016 | 교정 소실 + 성능 하락 |
-| B2 (구조적 절단) | 0.207±0.034 | 0.207±0.034 | 0.000±0.000 | 기능 파괴 |
-| C1 (셔플 피드백) | 0.698±0.054 | 0.634±0.041 | **-0.064±0.048** | 잘못된 피드백 = 악화 |
-| **C2 (클론 피드백)** | 0.698±0.054 | 0.623±0.043 | **-0.075±0.030** | 다른 모델의 정상 출력도 악화 |
-| D (피드포워드) | 0.746±0.067 | 0.746±0.067 | 0.000±0.000 | 교정 불가 (재귀 없음) |
-| D' (param-matched FF) | 0.822±0.031 | 0.822±0.031 | 0.000±0.000 | 용량 효과 아님 |
+| Group | acc_t1 | acc_t3 | gain (mean±std) | Interpretation |
+|-------|--------|--------|-----------------|----------------|
+| **Baseline** | 0.698±0.054 | 0.740±0.055 | **+0.042±0.030** | Self-correction occurs |
+| A (Recurrent Cut) | 0.698±0.054 | 0.698±0.054 | 0.000±0.000 | Correction completely lost |
+| B1 (Random Cut) | 0.515±0.048 | 0.511±0.037 | -0.004±0.016 | Correction lost + performance degraded |
+| B2 (Structural Cut) | 0.207±0.034 | 0.207±0.034 | 0.000±0.000 | Function destroyed |
+| C1 (Shuffled Feedback) | 0.698±0.054 | 0.634±0.041 | **-0.064±0.048** | Wrong feedback = degradation |
+| **C2 (Clone Feedback)** | 0.698±0.054 | 0.623±0.043 | **-0.075±0.030** | Other model's valid output = degradation |
+| D (Feedforward) | 0.746±0.067 | 0.746±0.067 | 0.000±0.000 | No correction possible (no recurrence) |
+| D' (Param-matched FF) | 0.822±0.031 | 0.822±0.031 | 0.000±0.000 | Not a capacity effect |
 
 ### 95% Bootstrap CI (noise=0.5)
 
@@ -47,10 +48,10 @@ Time-weighted loss와 temperature scaling 적용 후, Baseline correction gain =
 | C1 | [-0.095, -0.036] |
 | C2 | [-0.095, -0.058] |
 
-### Holm-Bonferroni 보정 p-values (Wilcoxon signed-rank exact, Baseline vs 각 그룹)
+### Holm-Bonferroni Corrected p-values (Wilcoxon signed-rank exact, Baseline vs. each group)
 
-| 비교 | raw p | 보정 p | 유의성 |
-|------|-------|--------|--------|
+| Comparison | raw p | corrected p | Significance |
+|------------|-------|-------------|--------------|
 | Baseline vs C1 | 0.00195 | 0.0117 | * |
 | Baseline vs C2 | 0.00195 | 0.0117 | * |
 | Baseline vs B1 | 0.00391 | 0.0156 | * |
@@ -58,105 +59,105 @@ Time-weighted loss와 temperature scaling 적용 후, Baseline correction gain =
 | Baseline vs D | 0.00781 | 0.0234 | * |
 | Baseline vs D' | 0.00781 | 0.0234 | * |
 
-## 3. 가설 검증
+## 3. Hypothesis Verification
 
-### 3.1 핵심 가설: "재귀 루프 제거 → 자기 교정 소실"
+### 3.1 Core Hypothesis: "Removing the recurrent loop eliminates self-correction"
 
-**강하게 지지됨.**
+**Strongly supported.**
 
-- Baseline gain = +0.042 (양수, 95% CI 0 불포함)
-- Group A gain = 0.000 (재귀 제거 시 교정 완전 소실)
-- **acc_t1은 Baseline과 A가 동일** (0.698) → 재귀는 초기 인식에 영향 없음, 순수하게 교정에만 기여
+- Baseline gain = +0.042 (positive, 95% CI excludes zero)
+- Group A gain = 0.000 (correction completely vanishes when recurrence is removed)
+- **acc_t1 is identical between Baseline and A** (0.698) → recurrence has no effect on initial recognition; it contributes purely to correction
 
-### 3.2 "정보량이 아니라 자기참조가 핵심" (Group C1, C2)
+### 3.2 "Self-reference, not just information flow" (Group C1, C2)
 
-**강하게 지지됨.**
+**Strongly supported.**
 
-- C1 (피드백 셔플): 재귀 연결은 유지, 분포(평균/분산) 동일, 위치 정보만 파괴
-- gain = -0.064 → Baseline(+0.042) 대비 **-0.106** 하락
-- 잘못된 자기참조는 없는 것(A: 0.000)보다도 **더 나쁨**
-- 네트워크가 피드백을 적극적으로 사용하되, 잘못된 정보가 들어오면 오답으로 끌려감
+- C1 (shuffled feedback): recurrent connections preserved, distribution (mean/variance) identical, only positional information destroyed
+- gain = -0.064 → a **-0.106** drop from Baseline (+0.042)
+- Incorrect self-reference is **worse** than having none at all (A: 0.000)
+- The network actively uses feedback, but when incorrect information is fed back, it is pulled toward wrong answers
 
-**C2 (클론 피드백)로 OOD 비판 차단:**
+**C2 (Clone Feedback) defeats the OOD criticism:**
 
-- C2: 다른 seed로 학습된 동일 구조 모델의 **정상 출력**을 피드백으로 주입
-- gain = -0.075 → C1(-0.064)보다도 **더 악화**
-- C1의 결과가 단순 OOD(out-of-distribution) 아티팩트라는 비판을 완전히 차단
-- 클론의 출력은 동일한 분포·구조·학습 과정의 산물이지만, "자기 자신"이 아닌 이상 교정에 사용 불가
-- **결론: 자기 교정은 "합리적 피드백"이 아닌 "자기 자신의 출력 궤적"에 의존**
+- C2: injects **well-formed output** from a differently-seeded but identically-structured trained model
+- gain = -0.075 → degradation **at least as severe** as C1 (-0.064); direct C1 vs C2 comparison is not statistically significant (Wilcoxon p = 0.695)
+- Defeats the criticism that C1's degradation is merely an OOD (out-of-distribution) artifact
+- The clone's output is a product of the same distribution, architecture, and training procedure — but since it is not "self," it cannot be used for correction
+- **Conclusion: self-correction depends on the model's own output trajectory, not just any reasonable feedback signal.** See `REPORT_C2.md` for full analysis.
 
-### 3.3 "파라미터 수 효과 배제" (Group D')
+### 3.3 "Ruling out parameter count effects" (Group D')
 
-**지지됨.**
+**Supported.**
 
-- D' (skip connection, 파라미터 수 Baseline과 동일): gain = 0.000
-- acc_t1 = 0.822 (Baseline 0.698보다 높음) → 추가 파라미터는 FF 성능만 향상
-- 자기 교정은 파라미터 용량이 아니라 재귀 구조에서 발생
+- D' (skip connection, parameter count matches Baseline): gain = 0.000
+- acc_t1 = 0.822 (higher than Baseline's 0.698) → extra parameters improve FF performance only
+- Self-correction arises from recurrent structure, not parameter capacity
 
-### 3.4 노이즈 의존성
+### 3.4 Noise Dependence
 
-**부분 지지.**
+**Partially supported.**
 
-- Noise sweep에서 Baseline gain은 noise=0.3에서 최대(~0.095), 이후 감소
-- 가설 예측("고노이즈에서 격차 확대")과 다소 다름 — 중간 노이즈가 최적
-- 해석: 너무 높은 노이즈에서는 자기 교정으로도 해결 불가, 적정 난이도에서 교정이 가장 효과적
+- In the noise sweep, Baseline gain peaks at noise=0.2 (~0.099), then decreases
+- Differs somewhat from the hypothesis prediction ("gap widens at high noise") — moderate noise is optimal
+- Interpretation: at very high noise, self-correction alone cannot compensate; correction is most effective at moderate difficulty
 
-## 4. 창발(Emergence) 조건 분석
+## 4. Emergence Condition Analysis
 
-### 이전 실험에서 emergence가 없었던 이유
+### Why emergence was absent in earlier experiments
 
-1. **균등 Loss (1/T)**: t=1부터 정답 압력 → 네트워크가 피드백 활용 동기 상실
-2. **Tanh 포화**: output logit ±5 → tanh 미분 ≈ 0 → W_rec 학습 불가
+1. **Uniform loss (1/T)**: accuracy pressure from t=1 → network loses incentive to utilize feedback
+2. **Tanh saturation**: output logits ±5 → tanh derivative ≈ 0 → W_rec cannot learn
 
-### 수정 후 emergence가 발생한 이유
+### Why emergence appeared after modifications
 
-1. **Time-weighted Loss [0.0, 0.2, 1.0]**: t=1 자유 → 네트워크가 t=2,3에서 교정하는 전략 학습
-2. **Temperature τ=2.0**: tanh(output/2.0) → 포화 방지, W_rec 그래디언트 흐름 유지
+1. **Time-weighted loss [0.0, 0.2, 1.0]**: t=1 free → network learns correction strategy at t=2,3
+2. **Temperature τ=2.0**: tanh(output/2.0) → prevents saturation, maintains W_rec gradient flow
 
-### 핵심 교훈
+### Key Lesson
 
-> **Emergence는 용량(뉴런 수)의 문제가 아니라 학습 동기(Loss 설계)와 기울기 흐름(Gradient flow)의 문제였다.**
-> 35개 뉴런으로도 충분하다.
+> **Emergence is not a matter of capacity (neuron count) but of learning incentive (loss design) and gradient flow.**
+> 35 neurons are sufficient.
 
-## 5. 뉴런 중요도 분석
+## 5. Neuron Importance Analysis
 
-Neuron Importance Heatmap에서:
+From the Neuron Importance Heatmap:
 
-- **우상단 (intelligence + correction 모두 중요)**: h1_7, h1_8, h2_2, h2_9, h1_1
-  - 이 뉴런들은 패턴 인식과 자기 교정 모두에 핵심적
-- **좌상단 (correction만 중요)**: h2_6, h2_7
-  - intelligence에는 기여가 적지만 자기 교정에 특화
-- **우하단 (intelligence만 중요)**: h1_6, h2_0, h2_4
-  - 패턴 인식에만 기여, 교정에는 무관하거나 방해
+- **Upper-right (important for both intelligence + correction)**: h1_7, h1_8, h2_2, h2_9, h1_1
+  - These neurons are critical for both pattern recognition and self-correction
+- **Upper-left (important for correction only)**: h2_6, h2_7
+  - Low contribution to intelligence but specialized for self-correction
+- **Lower-right (important for intelligence only)**: h1_6, h2_0, h2_4
+  - Contribute to pattern recognition only; irrelevant or detrimental to correction
 
-## 6. 생성된 파일
+## 6. Generated Files
 
-| 파일 | 설명 |
-|------|------|
-| `results/raw_metrics.csv` | 전체 실험 데이터 (3,960 rows, C2 포함) |
-| `results/neuron_importance.csv` | 뉴런별 importance 수치 |
-| `results/ablation_comparison.png` | 그룹별 gain 비교 |
-| `results/noise_sweep_curve.png` | 노이즈별 gain 곡선 |
-| `results/accuracy_distribution.png` | B1 분포 + A/C1 위치 |
-| `results/neuron_importance_heatmap.png` | Intelligence vs Correction 산점도 |
-| `results/network_map.png` | 뉴런 연결 시각화 |
+| File | Description |
+|------|-------------|
+| `results/raw_metrics.csv` | Full experiment data (3,960 rows, incl. C2) |
+| `results/neuron_importance.csv` | Per-neuron importance scores |
+| `results/ablation_comparison.png` | Group-wise gain comparison |
+| `results/noise_sweep_curve.png` | Gain curves across noise levels |
+| `results/accuracy_distribution.png` | B1 distribution + A/C1 positions |
+| `results/neuron_importance_heatmap.png` | Intelligence vs. Correction scatter |
+| `results/network_map.png` | Neuron connectivity visualization |
 
 ## 7. Robustness Analysis (Hyperparameter Sweep)
 
-80개 하이퍼파라미터 조합(w1×w2×τ) × 10 모델 = 800 실험 수행.
-**54/80 (68%)** 조합에서 emergence 확인. 상세 분석은 `results/REPORT_SWEEP.md` 참조.
+80 hyperparameter combinations (w1 × w2 × τ) × 10 models = 800 experiments.
+**54/80 (68%)** configurations showed emergence. See `REPORT_SWEEP.md` for details.
 
-| 파라미터 | Emergence 범위 | 실패 영역 |
-|----------|---------------|-----------|
-| w1 (t=1 weight) | ≤ 0.2 (95~75%) | 0.3 (10%) |
-| τ (temperature) | 1.0~3.0 (69~88%) | 5.0 (25%) |
-| w2 (t=2 weight) | 전체 범위 (60~75%) | — |
+| Parameter | Emergence Range | Failure Region |
+|-----------|----------------|----------------|
+| w1 (t=1 weight) | ≤ 0.2 (75–95%) | 0.3 (10%) |
+| τ (temperature) | 1.0–3.0 (69–88%) | 5.0 (25%) |
+| w2 (t=2 weight) | Full range (60–75%) | — |
 
-본 실험 설정(w1=0, w2=0.2, τ=2.0)은 80개 중 13위 — cherry-pick이 아닌 중간값.
+Our experimental setting (w1=0, w2=0.2, τ=2.0) ranks 13th/80 — a mid-range value, not cherry-picked.
 
-## 8. 한계점 및 향후 과제
+## 8. Limitations and Future Work
 
-1. **Time-weighted loss의 인위성**: w=[0.0, 0.2, 1.0]은 self-correction을 "유도"하는 구조. 자연발생적 emergence와는 구분 필요
-2. ~~**Group C2 미구현**~~ → ✅ **완료** (Clone Feedback, `REPORT_C2.md` 참조)
-3. **타임스텝별 뉴런 마스킹**: 현재 importance는 전체 타임스텝 ablation. t=2,3에서만 마스킹하면 더 정확한 교정 기여도 측정 가능
-4. **더 큰 네트워크에서의 검증**: 35 뉴런에서 확인했지만, 규모 확대 시 동일한 패턴이 유지되는지 검증 필요
+1. **Artificiality of time-weighted loss**: w=[0.0, 0.2, 1.0] is a structure that "induces" self-correction. Distinction from naturally emergent phenomena is needed
+2. ~~**Group C2 not implemented**~~ → ✅ **Completed** (Clone Feedback, see `REPORT_C2.md`)
+3. **Timestep-specific neuron masking**: Current importance is based on full-timestep ablation. Masking only at t=2,3 would yield more precise correction contribution measurements
+4. **Validation at larger scales**: Confirmed at 35 neurons, but verification is needed to determine whether the same patterns hold at larger scales

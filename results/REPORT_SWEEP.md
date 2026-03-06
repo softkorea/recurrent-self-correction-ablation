@@ -2,102 +2,102 @@
 
 ## Executive Summary
 
-80개 하이퍼파라미터 조합 (w1 x w2 x τ) × 10개 독립 모델 = **800 실험**을 수행했다.
-결과: **54/80 (68%)** 조합에서 emergence(자기 교정)가 확인되었다.
-Emergence는 특정 하이퍼파라미터 하나에만 의존하는 fragile한 현상이 아니라,
-**w1 ≤ 0.2, τ ≤ 3.0** 범위에서 광범위하게 나타나는 **robust한 현상**이다.
+We conducted **800 experiments** across 80 hyperparameter combinations (w1 × w2 × τ) × 10 independent models.
+Result: emergence (self-correction) was confirmed in **54/80 (68%)** combinations.
+Emergence is not a fragile phenomenon dependent on a single hyperparameter,
+but a **robust phenomenon** appearing broadly across the range **w1 ≤ 0.2, τ ≤ 3.0**.
 
 ---
 
-## 1. Sweep 설정
+## 1. Sweep Configuration
 
-| 항목 | 값 |
-|------|------|
+| Item | Value |
+|------|-------|
 | w1 (t=1 weight) | [0.0, 0.1, 0.2, 0.3] |
 | w2 (t=2 weight) | [0.1, 0.2, 0.3, 0.5] |
-| w3 (t=3 weight) | 1.0 (고정) |
+| w3 (t=3 weight) | 1.0 (fixed) |
 | τ (feedback temperature) | [1.0, 1.5, 2.0, 3.0, 5.0] |
-| 총 조합 수 | 4 × 4 × 5 = **80 configs** |
-| 모델 수 / config | 10 (seed 0~9) |
-| 총 실험 수 | **800** |
-| 데이터 | noise=0.5, 200 train / 200 test |
-| 학습 | 500 epochs, lr=0.01, T=3 |
-| Emergence 기준 | mean gain > 0 AND 60% 이상 모델에서 gain > 0 |
+| Total combinations | 4 × 4 × 5 = **80 configs** |
+| Models per config | 10 (seed 0–9) |
+| Total experiments | **800** |
+| Data | noise=0.5, 200 train / 200 test |
+| Training | 500 epochs, lr=0.01, T=3 |
+| Emergence criterion | mean gain > 0 AND gain > 0 in ≥ 60% of models |
 
-## 2. 전체 결과 요약
+## 2. Overall Results Summary
 
-| 지표 | 값 |
-|------|------|
-| 전체 mean gain | **+0.0150 ± 0.0405** |
-| 전체 median gain | **+0.0150** |
-| gain > 0 비율 | **67.2%** (800회 중 538회) |
-| Emergence config 수 | **54/80 (68%)** |
+| Metric | Value |
+|--------|-------|
+| Overall mean gain | **+0.0150 ± 0.0405** |
+| Overall median gain | **+0.0150** |
+| Fraction with gain > 0 | **67.2%** (538 of 800 runs) |
+| Emergence config count | **54/80 (68%)** |
 
-## 3. 하이퍼파라미터별 분석
+## 3. Per-Hyperparameter Analysis
 
-### 3.1 w1 (t=1 loss weight) — 가장 강한 영향
+### 3.1 w1 (t=1 loss weight) — Strongest Influence
 
-| w1 | mean gain | Emergence | 해석 |
-|----|-----------|-----------|------|
-| **0.0** | **+0.0348** | **19/20 (95%)** | 최적. t=1에서 자유로움 → 교정 전략 학습 |
-| 0.1 | +0.0209 | 18/20 (90%) | 양호. 약간의 t=1 압력도 허용 |
-| 0.2 | +0.0066 | 15/20 (75%) | 경계선. gain 크기 감소 |
-| 0.3 | -0.0024 | 2/20 (10%) | 실패. t=1 압력이 교정 동기를 차단 |
+| w1 | mean gain | Emergence | Interpretation |
+|----|-----------|-----------|----------------|
+| **0.0** | **+0.0348** | **19/20 (95%)** | Optimal. Freedom at t=1 → learns correction strategy |
+| 0.1 | +0.0209 | 18/20 (90%) | Good. Slight t=1 pressure is tolerable |
+| 0.2 | +0.0066 | 15/20 (75%) | Borderline. Gain magnitude decreases |
+| 0.3 | -0.0024 | 2/20 (10%) | Failure. t=1 pressure blocks correction incentive |
 
-**핵심 발견**: w1은 emergence의 가장 결정적 요인이다.
-w1=0.0 (t=1 loss 무시)일 때 네트워크는 "처음부터 정답을 맞출 필요가 없다"는 자유를 얻고,
-피드백을 통한 반복적 교정 전략을 학습한다. w1=0.3까지 올리면 t=1에서도 정답 압력이 걸려,
-네트워크가 feedforward 성능에 집중하고 recurrent 경로를 무시하게 된다.
+**Key finding**: w1 is the most decisive factor for emergence.
+When w1=0.0 (ignoring t=1 loss), the network gains the freedom of "the first guess doesn't need to be correct"
+and learns iterative correction strategies through feedback. Raising w1 to 0.3 applies accuracy pressure at t=1,
+causing the network to focus on feedforward performance and ignore the recurrent pathway.
 
-### 3.2 τ (feedback temperature) — 두 번째 영향
+### 3.2 τ (feedback temperature) — Second Strongest Influence
 
-| τ | mean gain | Emergence | 해석 |
-|---|-----------|-----------|------|
-| **1.0** | **+0.0248** | **13/16 (81%)** | 최적. 날카로운 피드백 |
-| 1.5 | +0.0180 | 14/16 (88%) | 양호 |
-| 2.0 | +0.0145 | 12/16 (75%) | 양호 (본 실험 기본값) |
-| 3.0 | +0.0148 | 11/16 (69%) | 경계선 |
-| 5.0 | +0.0040 | 4/16 (25%) | 약화. 피드백 정보 희석 |
+| τ | mean gain | Emergence | Interpretation |
+|---|-----------|-----------|----------------|
+| **1.0** | **+0.0248** | **13/16 (81%)** | Optimal. Sharp feedback |
+| 1.5 | +0.0180 | 14/16 (88%) | Good |
+| 2.0 | +0.0145 | 12/16 (75%) | Good (default in main experiment) |
+| 3.0 | +0.0148 | 11/16 (69%) | Borderline |
+| 5.0 | +0.0040 | 4/16 (25%) | Weakened. Feedback signal diluted |
 
-**핵심 발견**: τ=1.0~3.0 범위에서 emergence가 광범위하게 유지된다.
-τ=5.0에서 급격히 약화되는 이유: 높은 온도는 `tanh(output/5.0)` 출력을
-거의 선형(≈ output/5)으로 만들어, 피드백 신호의 변별력이 약해진다.
-반면 τ=1.0은 tanh 포화 위험이 있으나, 실제로는 학습이 이에 적응하여 가장 강한 emergence를 보인다.
+**Key finding**: Emergence is broadly maintained across τ=1.0–3.0.
+The sharp decline at τ=5.0 occurs because high temperature makes `tanh(output/5.0)` nearly linear (≈ output/5),
+reducing the discriminability of the feedback signal.
+Conversely, τ=1.0 risks tanh saturation, but in practice the network adapts and shows the strongest emergence.
 
-### 3.3 w2 (t=2 loss weight) — 약한 영향
+### 3.3 w2 (t=2 loss weight) — Weak Influence
 
-| w2 | mean gain | Emergence | 해석 |
-|----|-----------|-----------|------|
-| 0.1 | +0.0192 | 15/20 (75%) | 약간 최적 |
+| w2 | mean gain | Emergence | Interpretation |
+|----|-----------|-----------|----------------|
+| 0.1 | +0.0192 | 15/20 (75%) | Slightly optimal |
 | 0.2 | +0.0155 | 14/20 (70%) | |
 | 0.3 | +0.0128 | 12/20 (60%) | |
 | 0.5 | +0.0127 | 13/20 (65%) | |
 
-**핵심 발견**: w2는 emergence에 미미한 영향만 미친다.
-t=2는 교정 "과정"에 해당하는데, 이 과정에 강한 압력을 가하든 약한 압력을 가하든
-최종 결과(t=3)에는 큰 차이가 없다. 네트워크는 t=3의 loss signal만으로
-충분히 교정 전략을 학습한다.
+**Key finding**: w2 has only marginal influence on emergence.
+t=2 corresponds to the correction "process" — whether strong or weak pressure is applied to this intermediate step,
+the final result (t=3) shows little difference. The network learns correction strategies
+sufficiently from the t=3 loss signal alone.
 
-## 4. 교차 분석: w1 × τ Emergence 매트릭스
+## 4. Cross-Analysis: w1 × τ Emergence Matrix
 
-아래는 각 (w1, τ) 조합에서 4개 w2 값 중 emergence가 확인된 비율이다.
+The table below shows the fraction of 4 w2 values where emergence was confirmed for each (w1, τ) combination.
 
 ```
          τ=1.0  τ=1.5  τ=2.0  τ=3.0  τ=5.0
 w1=0.0    4/4    4/4    4/4    4/4    3/4     → 95% (19/20)
 w1=0.1    4/4    4/4    4/4    4/4    2/4     → 90% (18/20)
 w1=0.2    4/4    4/4    3/4    3/4    1/4     → 75% (15/20)
-w1=0.3    1/4    2/4    1/4    0/4    0/4     → 10% ( 2/20) ← 실패 영역
+w1=0.3    1/4    0/4    1/4    0/4    0/4     → 10% ( 2/20) ← failure region
 ```
 
-**패턴**: w1 ≤ 0.2, τ ≤ 3.0 의 직사각형 영역에서 emergence가 거의 100% 확인된다.
-이는 emergence가 "w1과 τ의 특정 조합에서만 운 좋게 관찰되는 현상"이 아님을 보여준다.
+**Pattern**: Emergence is confirmed at nearly 100% in the rectangular region w1 ≤ 0.2, τ ≤ 3.0.
+This demonstrates that emergence is not "a phenomenon lucky enough to be observed only at a specific combination of w1 and τ."
 
-## 5. 최적 / 최악 조합
+## 5. Best / Worst Configurations
 
-### Top 5 (가장 강한 emergence)
+### Top 5 (Strongest Emergence)
 
-| 순위 | w1 | w2 | τ | mean gain |
+| Rank | w1 | w2 | τ | mean gain |
 |------|----|----|---|-----------|
 | 1 | 0.0 | 0.1 | 1.0 | **+0.054** |
 | 2 | 0.0 | 0.2 | 1.0 | +0.053 |
@@ -105,117 +105,117 @@ w1=0.3    1/4    2/4    1/4    0/4    0/4     → 10% ( 2/20) ← 실패 영역
 | 4 | 0.0 | 0.5 | 1.0 | +0.051 |
 | 5 | 0.0 | 0.1 | 1.5 | +0.047 |
 
-상위 5개 모두 **w1=0.0**이며, 상위 4개는 τ=1.0이다. w2는 거의 영향 없음.
+All top 5 have **w1=0.0**, and the top 4 have τ=1.0. w2 has virtually no effect.
 
-### Bottom 5 (emergence 실패)
+### Bottom 5 (Emergence Failure)
 
-| 순위 | w1 | w2 | τ | mean gain |
+| Rank | w1 | w2 | τ | mean gain |
 |------|----|----|---|-----------|
 | 76 | 0.3 | 0.2 | 2.0 | -0.006 |
-| 77 | 0.0 | 0.5 | 5.0 | -0.007 |  ← w1=0.0이어도 τ=5.0에서 실패
+| 77 | 0.0 | 0.5 | 5.0 | -0.007 | ← even w1=0.0 fails at τ=5.0 |
 | 78 | 0.3 | 0.3 | 1.5 | -0.008 |
 | 79 | 0.3 | 0.5 | 1.5 | -0.008 |
 | 80 | 0.3 | 0.5 | 2.0 | **-0.012** |
 
-하위 조합의 공통점: **w1=0.3** (대부분) 또는 **τ=5.0**.
+Common factor in bottom configurations: **w1=0.3** (most cases) or **τ=5.0**.
 
-## 6. Heatmap 해석
+## 6. Heatmap Interpretation
 
-### τ=1.0 (최적 온도)
+### τ=1.0 (Optimal Temperature)
 ```
 w1\w2    0.1     0.2     0.3     0.5
-0.0   +0.054  +0.053  +0.052  +0.051   ← 균일하게 강한 emergence
-0.1   +0.051  +0.030  +0.033  +0.023   ← w2 증가 시 약간 감소
-0.2   +0.012  +0.015  +0.013  +0.011   ← 급격한 감소 시작
-0.3   +0.002  +0.000  -0.004  +0.003   ← emergence 소실
+0.0   +0.054  +0.053  +0.052  +0.051   ← uniformly strong emergence
+0.1   +0.051  +0.030  +0.033  +0.023   ← slight decrease with higher w2
+0.2   +0.012  +0.015  +0.013  +0.011   ← sharp decline begins
+0.3   +0.002  +0.000  -0.004  +0.003   ← emergence lost
 ```
 
-w1=0.0 행은 w2 값에 무관하게 **+0.051~+0.054**로 거의 동일하다.
-이는 w2가 emergence에 거의 무관함을 시각적으로 확인시켜 준다.
+The w1=0.0 row shows nearly identical values of **+0.051–+0.054** regardless of w2.
+This visually confirms that w2 has negligible effect on emergence.
 
-### τ=5.0 (과도한 온도)
+### τ=5.0 (Excessive Temperature)
 ```
 w1\w2    0.1     0.2     0.3     0.5
-0.0   +0.018  +0.012  +0.008  +0.013   ← 약한 emergence만 잔존
-0.1   +0.004  +0.002  +0.005  +0.008   ← 거의 0
-0.2   -0.001  -0.002  +0.003  +0.004   ← 0 부근 진동
-0.3   -0.007  -0.004  -0.002  +0.002   ← 음수 영역
+0.0   +0.018  +0.012  +0.008  +0.013   ← only weak emergence remains
+0.1   +0.004  +0.002  +0.005  +0.008   ← near zero
+0.2   -0.001  -0.002  +0.003  +0.004   ← oscillating around zero
+0.3   -0.007  -0.004  -0.002  +0.002   ← negative territory
 ```
 
-τ=5.0에서는 w1=0.0이어도 gain이 +0.008~+0.018로 약화된다.
+At τ=5.0, even with w1=0.0, gain is weakened to +0.008–+0.018.
 
-## 7. 물리적 해석
+## 7. Physical Interpretation
 
-### 왜 w1이 중요한가?
+### Why is w1 important?
 
-Time-weighted loss `L = w1·L(t=1) + w2·L(t=2) + 1.0·L(t=3)` 에서:
+In the time-weighted loss `L = w1·L(t=1) + w2·L(t=2) + 1.0·L(t=3)`:
 
-- **w1=0.0**: t=1에서 어떤 예측을 하든 벌칙 없음. 네트워크는 "첫 추측이 틀려도 된다"는
-  자유를 얻고, t=2~3에서의 교정에 학습 자원을 집중할 수 있다.
-- **w1=0.3**: t=1에서도 30%의 벌칙. 네트워크가 feedforward 경로(W_ih1→W_h1h2→W_h2o)를
-  t=1에서의 정확도 향상에 투자하게 되어, recurrent 경로(W_rec)의 학습이 상대적으로 약화된다.
+- **w1=0.0**: No penalty for any prediction at t=1. The network gains the freedom that
+  "the first guess can be wrong" and can focus learning resources on correction at t=2–3.
+- **w1=0.3**: 30% penalty at t=1. The network invests in the feedforward pathway (W_ih1→W_h1h2→W_h2o)
+  to improve t=1 accuracy, relatively weakening the learning of the recurrent pathway (W_rec).
 
-이는 **trade-off**: feedforward 성능 ↔ recurrent 교정 능력. w1이 커질수록
-feedforward 쪽으로 학습 자원이 쏠린다.
+This is a **trade-off**: feedforward performance ↔ recurrent correction capability. As w1 increases,
+learning resources shift toward the feedforward side.
 
-### 왜 τ가 중요한가?
+### Why is τ important?
 
-`feedback = tanh(prev_output / τ)` 에서:
+In `feedback = tanh(prev_output / τ)`:
 
-- **τ=1.0**: 출력 logit이 1 수준에서 tanh가 유의미한 비선형성을 제공.
-  피드백 신호의 변별력이 높아 hidden1이 "이전 예측이 무엇이었는지" 정확히 파악 가능.
-- **τ=5.0**: tanh(x/5) ≈ x/5 (선형 근사). 피드백 신호가 선형적으로 약해져
-  정보 전달 효율이 급격히 감소. W_rec을 통한 교정 능력 제한.
+- **τ=1.0**: tanh provides meaningful nonlinearity at output logit magnitudes around 1.
+  High discriminability of the feedback signal allows hidden1 to precisely identify "what the previous prediction was."
+- **τ=5.0**: tanh(x/5) ≈ x/5 (linear approximation). The feedback signal is linearly weakened,
+  sharply reducing information transfer efficiency. Correction capability through W_rec is limited.
 
-## 8. Robustness 판정
+## 8. Robustness Assessment
 
-### P-hacking 비판에 대한 응답
+### Response to P-hacking Criticism
 
-| 질문 | 답변 |
-|------|------|
-| "딱 하나의 조합에서만 emergence가 보이는 것 아닌가?" | **아니다.** 54/80 (68%) 조합에서 확인. |
-| "w1, w2, τ를 모두 정밀하게 튜닝해야 하는가?" | **아니다.** w1 ≤ 0.2이면 τ=1.0~3.0 전체에서 작동. w2는 거의 무관. |
-| "original 실험(w1=0, w2=0.2, τ=2.0)이 cherry-pick된 것인가?" | **아니다.** 이 조합(gain=+0.042)은 전체 80개 중 13위. 최적이 아닌 중간 성능. |
-| "결과가 seed에 의존하는가?" | **아니다.** Emergence 조합에서 60%+ 모델이 양의 gain을 보임 (10개 독립 seed). |
+| Question | Answer |
+|----------|--------|
+| "Is emergence visible in only one specific combination?" | **No.** Confirmed in 54/80 (68%) configurations. |
+| "Do w1, w2, and τ all need precise tuning?" | **No.** If w1 ≤ 0.2, it works across τ=1.0–3.0. w2 is nearly irrelevant. |
+| "Is the original experiment (w1=0, w2=0.2, τ=2.0) cherry-picked?" | **No.** This combination (gain=+0.042) ranks 13th/80. Mid-range, not optimal. |
+| "Do results depend on the random seed?" | **No.** In emergence configurations, 60%+ models show positive gain (10 independent seeds). |
 
-### Robustness 범위
+### Robustness Range
 
 ```
-Emergence가 확인되는 범위 (54/80 configs):
-  w1 ∈ [0.0, 0.2]     — 3/4 값에서 안정적
-  w2 ∈ [0.1, 0.5]     — 전체 범위에서 (w2 무관)
-  τ  ∈ [1.0, 3.0]     — 4/5 값에서 안정적
+Range where emergence is confirmed (54/80 configs):
+  w1 ∈ [0.0, 0.2]     — stable across 3/4 values
+  w2 ∈ [0.1, 0.5]     — full range (w2 irrelevant)
+  τ  ∈ [1.0, 3.0]     — stable across 4/5 values
 
-Emergence가 약하거나 부재하는 영역:
-  w1 = 0.3             — t=1 압력 과다 → 교정 동기 상실
-  τ  = 5.0             — 피드백 정보 희석 → 교정 능력 약화
+Range where emergence is weak or absent:
+  w1 = 0.3             — excessive t=1 pressure → correction incentive lost
+  τ  = 5.0             — feedback information diluted → correction capability weakened
 ```
 
-## 9. 본 실험 설정의 위치
+## 9. Position of Our Experimental Setting
 
-본 실험에서 사용한 기본 설정 (w1=0.0, w2=0.2, τ=2.0, gain=+0.042)은:
-- 전체 80개 조합 중 **13위** (상위 16%)
-- 최적값(w1=0.0, w2=0.1, τ=1.0, gain=+0.054) 대비 78% 수준
-- "최적"이 아닌 **중간 영역**에서 선택된 설정
+The default setting used in our main experiment (w1=0.0, w2=0.2, τ=2.0, gain=+0.042):
+- Ranks **13th** out of 80 combinations (top 16%)
+- 78% of the optimal value (w1=0.0, w2=0.1, τ=1.0, gain=+0.054)
+- Selected from the **mid-range**, not the optimum
 
-이는 본 실험이 cherry-picked 설정이 아님을 보여준다. 최적 설정을 찾아 보고하는 것이 아니라,
-합리적인 중간값을 사용하여도 emergence가 관찰된다.
+This demonstrates that our experiment is not based on a cherry-picked setting. Emergence is observed
+even with a reasonable mid-range configuration, not just when reporting the optimal setting.
 
-## 10. 생성된 파일
+## 10. Generated Files
 
-| 파일 | 설명 |
-|------|------|
-| `results/sweep_hyperparams.csv` | 전체 800개 실험 raw 데이터 |
+| File | Description |
+|------|-------------|
+| `results/sweep_hyperparams.csv` | Full 800-experiment raw data |
 | `results/sweep_heatmap_tau1.0.png` | τ=1.0 w1×w2 heatmap |
 | `results/sweep_heatmap_tau1.5.png` | τ=1.5 w1×w2 heatmap |
 | `results/sweep_heatmap_tau2.0.png` | τ=2.0 w1×w2 heatmap |
 | `results/sweep_heatmap_tau3.0.png` | τ=3.0 w1×w2 heatmap |
 | `results/sweep_heatmap_tau5.0.png` | τ=5.0 w1×w2 heatmap |
-| `results/sweep_tau_overview.png` | τ별 gain 분포 scatter plot |
+| `results/sweep_tau_overview.png` | Gain distribution scatter plot by τ |
 
-## 11. 논문 반영 제안
+## 11. Suggested Paper Integration
 
-### Section 2.4 확장: "Robustness Analysis"
+### Section 2.4 Extension: "Robustness Analysis"
 
 > We swept three hyperparameters: the t=1 loss weight w1 ∈ {0.0, 0.1, 0.2, 0.3},
 > the t=2 loss weight w2 ∈ {0.1, 0.2, 0.3, 0.5}, and the feedback temperature
@@ -232,13 +232,13 @@ Emergence가 약하거나 부재하는 영역:
 
 ### Appendix: Raw Sweep Table
 
-전체 80개 config의 mean gain, std, emergence 여부를 표로 공개.
-`results/sweep_hyperparams.csv`에서 재생성 가능.
+Full mean gain, std, and emergence status for all 80 configurations published as a table.
+Reproducible from `results/sweep_hyperparams.csv`.
 
-## 12. 결론
+## 12. Conclusions
 
-1. **Emergence는 robust하다**: 80개 조합 중 68%에서 확인. 특정 하이퍼파라미터 하나에 의존하지 않음.
-2. **핵심 요인은 w1 (t=1 loss weight)**: 네트워크에 "초기 예측이 자유롭다"는 신호를 주는 것이 가장 중요.
-3. **τ (temperature)는 보조적**: 적정 범위(1.0~3.0)면 충분. 극단적 값(5.0)에서만 약화.
-4. **w2 (t=2 loss weight)는 무관**: 전체 범위에서 거의 동일한 결과.
-5. **P-hacking 가능성 배제**: 본 실험 설정은 최적이 아닌 중간값이며, 결과는 넓은 범위에서 재현 가능.
+1. **Emergence is robust**: Confirmed in 68% of 80 combinations. Not dependent on a single hyperparameter.
+2. **The key factor is w1 (t=1 loss weight)**: Signaling to the network that "the initial prediction is free" is most important.
+3. **τ (temperature) is secondary**: An adequate range (1.0–3.0) is sufficient. Weakened only at the extreme value (5.0).
+4. **w2 (t=2 loss weight) is irrelevant**: Nearly identical results across the full range.
+5. **P-hacking possibility excluded**: Our experimental setting is a mid-range value, not the optimum, and results are reproducible across a broad range.

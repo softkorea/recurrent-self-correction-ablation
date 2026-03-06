@@ -1,73 +1,74 @@
-# Group C2 (Clone Feedback) — 보충 실험 보고서
+# Group C2 (Clone Feedback) — Supplementary Experiment Report
 
 ## Executive Summary
 
-Group C2는 **다른 모델의 정상 출력**을 피드백으로 주입하는 실험이다.
-C1(셔플 피드백)이 OOD(out-of-distribution) 아티팩트일 수 있다는 비판을 차단하기 위해 설계되었다.
+Group C2 injects **another trained model's well-formed output** as feedback,
+designed to defeat the criticism that C1's degradation is merely an OOD (out-of-distribution) artifact.
 
-결과: **gain = -0.075 ± 0.030** (95% CI: [-0.095, -0.058], Wilcoxon signed-rank exact p = 0.00195, Holm-Bonferroni 보정 후 p = 0.0117).
-C1(-0.064)보다도 더 악화. 자기 교정은 "합리적 피드백"이 아닌 **자기 자신의 출력 궤적**에 의존한다.
+Result: **gain = -0.075 ± 0.030** (95% CI: [-0.095, -0.058], Wilcoxon signed-rank exact p = 0.00195, Holm-Bonferroni corrected p = 0.0117).
+Degradation at least as severe as C1 (-0.064); the direct C1 vs C2 difference is not statistically significant (Wilcoxon p = 0.695).
+Self-correction depends on **the model's own output trajectory**, not just any reasonable feedback signal.
 
 ---
 
-## 1. 동기: 왜 C2가 필요한가
+## 1. Motivation: Why C2 Is Needed
 
-### C1에 대한 비판 가능성
+### Possible Criticism of C1
 
-Group C1(permutation feedback)은 피드백 벡터의 원소를 랜덤으로 셔플한다.
-이로 인해 피드백이 네트워크가 학습 시 본 적 없는 **비정상적 분포**가 될 수 있다.
+Group C1 (permutation feedback) randomly shuffles feedback vector elements.
+This may produce feedback that the network has never seen during training — an atypical distribution.
 
-> "C1의 성능 하락은 자기참조가 깨져서가 아니라,
-> 단순히 OOD(out-of-distribution) 입력이 들어와서 네트워크가 혼란스러운 것이다."
+> "C1's performance drop is not because self-reference is broken,
+> but simply because OOD input confuses the network."
 
-### C2의 해결책
+### C2's Solution
 
-C2는 **다른 seed로 학습된 동일 구조의 모델**의 출력을 피드백으로 사용한다:
-- 같은 아키텍처 (Input 10 → H1 10 → H2 10 → Output 5)
-- 같은 학습 데이터, 같은 노이즈 레벨
-- 같은 학습 과정 (SGD, 500 epochs, lr=0.01)
-- **다른 것은 오직 초기 seed** → 다른 가중치, 다른 출력 궤적
+C2 uses the output of an **identically-structured model trained with a different seed** as feedback:
+- Same architecture (Input 10 → H1 10 → H2 10 → Output 5)
+- Same training data and noise level
+- Same training procedure (SGD, 500 epochs, lr=0.01)
+- **Only the initialization seed differs** → different weights, different output trajectory
 
-따라서 클론의 출력은:
-- ✅ 정상 분포 (in-distribution)
-- ✅ 유효한 분류 출력 (학습된 모델의 산물)
-- ✅ 합리적 크기와 범위
-- ❌ "자기 자신"의 출력이 아님
+Therefore the clone's output is:
+- ✅ In-distribution (normal, well-formed)
+- ✅ A valid classification output (product of a trained model)
+- ✅ Reasonable magnitude and range
+- ❌ Not the model's "own" output
 
-## 2. 실험 설계
+## 2. Experimental Design
 
-### 방법
+### Method
 
 ```
-모델 i (seed=i)의 평가 시:
-  t=1: target과 clone 모두 독립 forward (피드백 없음)
-  t=2: target의 _prev_output ← clone의 t=1 출력
-  t=3: target의 _prev_output ← clone의 t=2 출력
+When evaluating model i (seed=i):
+  t=1: both target and clone forward independently (no feedback)
+  t=2: target._prev_output ← clone's t=1 output
+  t=3: target._prev_output ← clone's t=2 output
 
-clone = 모델 (i+1) % 10
+clone = model[(i+1) % 10]
 ```
 
-### 설정
+### Configuration
 
-| 항목 | 값 |
-|------|------|
-| 독립 모델 | 10 (seed 0~9) |
-| 클론 페어링 | model[i] ← model[(i+1)%10] |
-| 노이즈 레벨 | [0.1, 0.2, 0.3, 0.5, 0.7, 1.0] |
-| 학습 | 기존과 동일 (500 epochs, lr=0.01) |
+| Item | Value |
+|------|-------|
+| Independent models | 10 (seed 0–9) |
+| Clone pairing | model[i] ← model[(i+1)%10] |
+| Noise levels | [0.1, 0.2, 0.3, 0.5, 0.7, 1.0] |
+| Training | Same as main experiment (500 epochs, lr=0.01) |
 
-## 3. 결과
+## 3. Results
 
-### 3.1 주요 비교 (noise=0.5, N=10)
+### 3.1 Main Comparison (noise=0.5, N=10)
 
 | Group | gain (mean±std) | 95% CI | p-value |
 |-------|----------------|--------|---------|
 | **Baseline** | **+0.042±0.030** | [+0.023, +0.059] | — |
-| A (재귀 절단) | +0.000±0.000 | [0.000, 0.000] | 0.0234 * |
-| C1 (셔플 피드백) | **-0.064±0.048** | [-0.095, -0.036] | 0.0117 * |
-| **C2 (클론 피드백)** | **-0.075±0.030** | [-0.095, -0.058] | 0.0117 * |
+| A (Recurrent Cut) | +0.000±0.000 | [0.000, 0.000] | 0.0234 * |
+| C1 (Shuffled Feedback) | **-0.064±0.048** | [-0.095, -0.036] | 0.0117 * |
+| **C2 (Clone Feedback)** | **-0.075±0.030** | [-0.095, -0.058] | 0.0117 * |
 
-### 3.2 노이즈 레벨별 비교
+### 3.2 Across Noise Levels
 
 | noise | Baseline | C1 | C2 |
 |-------|----------|-----|-----|
@@ -78,69 +79,69 @@ clone = 모델 (i+1) % 10
 | 0.7 | +0.015 | -0.029 | -0.035 |
 | 1.0 | +0.006 | -0.014 | -0.013 |
 
-### 3.3 핵심 관찰
+### 3.3 Key Observations
 
-1. **C2 ≈ C1 (또는 더 나쁨)**: 모든 노이즈 레벨에서 C2의 gain은 C1과 유사하거나 더 낮음
-2. **acc_t1 동일**: Baseline, A, C1, C2 모두 acc_t1 = 0.698 (피드백 없는 초기 예측은 동일)
-3. **C2의 피드백은 in-distribution**: 클론의 출력은 정상적으로 학습된 유효한 분류 출력
-4. **그럼에도 교정 실패**: 자기 자신의 출력이 아니면 교정이 작동하지 않음
+1. **C2 ≈ C1**: Across intermediate noise levels (0.2–0.7), C2's gain is comparable to C1; the direct difference is not statistically significant (Wilcoxon p = 0.695)
+2. **acc_t1 identical**: Baseline, A, C1, C2 all have acc_t1 = 0.698 (initial prediction unaffected by feedback)
+3. **C2's feedback is in-distribution**: The clone's output is a valid classification output from a properly trained model
+4. **Correction still fails**: Without its *own* output, the network cannot self-correct
 
-## 4. 해석
+## 4. Interpretation
 
-### 4.1 OOD 비판의 차단
+### 4.1 Defeating the OOD Criticism
 
-C1에 대한 "OOD 아티팩트" 비판은 C2에 의해 완전히 차단된다:
+The "OOD artifact" criticism of C1 is completely defeated by C2:
 
-| 비판 | C1 | C2 |
-|------|-----|-----|
-| 피드백이 비정상 분포? | 가능 | ❌ 정상 분포 |
-| 피드백이 무의미한 노이즈? | 가능 | ❌ 학습된 모델의 유효 출력 |
-| 피드백 크기/범위가 이상? | 가능 | ❌ 동일 구조·학습의 산물 |
-| 결과: gain 악화? | ✅ -0.064 | ✅ -0.075 |
+| Criticism | C1 | C2 |
+|-----------|-----|-----|
+| Feedback has abnormal distribution? | Possible | ❌ Normal distribution |
+| Feedback is meaningless noise? | Possible | ❌ Valid trained model output |
+| Feedback magnitude/range is wrong? | Possible | ❌ Product of same architecture+training |
+| Result: gain degraded? | ✅ -0.064 | ✅ -0.075 |
 
-C2의 피드백이 in-distribution임에도 gain이 악화된다는 것은,
-**성능 하락의 원인이 OOD가 아니라 "자기 자신이 아닌 출력의 주입"임을 증명**한다.
+The fact that C2's in-distribution feedback still causes degradation proves that
+**the cause of performance drop is not OOD, but the injection of "not-self" output**.
 
-### 4.2 자기 교정의 메커니즘
+### 4.2 Mechanism of Self-Correction
 
-실험 결과가 시사하는 자기 교정의 메커니즘:
+The results suggest the following self-correction mechanism:
 
-1. **t=1**: 네트워크가 노이즈 낀 입력에 대해 초기 예측을 생성
-2. **t=2,3**: 네트워크가 **자기 이전 출력의 특정 패턴**을 읽어 오류를 감지하고 수정
-3. 이 과정은 **자기 가중치(W_rec)와 자기 출력 사이의 특정한 정합 관계**에 의존
-4. 다른 모델의 출력은 같은 "언어"로 표현되어 있지 않아 오류 감지가 불가능
+1. **t=1**: The network produces an initial prediction for noisy input
+2. **t=2,3**: The network reads **specific patterns in its own previous output** to detect and correct errors
+3. This process depends on a **specific alignment between the model's weights (W_rec) and its own output**
+4. Another model's output is not "written in the same language," making error detection impossible
 
-비유하면: 자기 필체로 쓴 메모를 읽어 교정하는 것과,
-남의 필체로 쓴 메모를 읽어 교정하려는 것의 차이.
+Analogy: it is the difference between reading your own handwritten notes to make corrections,
+versus trying to correct from someone else's handwritten notes.
 
-### 4.3 C2 > C1 악화의 의미
+### 4.3 Why C2 Degrades Performance Comparably to C1
 
-흥미롭게도 C2가 C1보다 다소 더 나쁜 경향이 있다:
-- C1의 셔플된 피드백은 무의미하여 네트워크가 "무시"할 여지가 있음
-- C2의 클론 출력은 **유의미하지만 잘못된 신호**여서 네트워크가 적극적으로 따라가다 더 큰 오류 발생
+C2 tends to produce degradation comparable to C1 (the difference is not statistically significant, Wilcoxon p = 0.695):
+- C1's shuffled feedback is meaningless, so the network may partially "ignore" it
+- C2's clone output is **meaningful but misaligned with the model's own W_rec**, potentially causing the network to follow it into errors
 
-이는 Group A(재귀 절단, gain=0)와의 대비에서도 드러남:
-- 피드백이 없으면(A): 교정도 없지만 악화도 없음
-- 피드백이 있지만 틀리면(C1, C2): 적극적으로 오답으로 끌려감
+This is also evident in the contrast with Group A (recurrent cut, gain=0):
+- No feedback (A): no correction, but no degradation either
+- Feedback present but incorrect (C1, C2): the network is actively pulled toward wrong answers
 
-## 5. 결론
+## 5. Conclusion
 
-> **자기 교정(Self-Correction)은 "합리적 피드백 신호의 존재"가 아닌
-> "자기 자신의 출력 궤적과의 정합"에 의존한다.**
+> **Self-correction depends not on "the presence of a reasonable feedback signal"
+> but on "alignment with the model's own output trajectory."**
 >
-> 동일한 구조와 학습 과정을 거친 다른 모델의 정상 출력조차
-> 자기 교정에 사용될 수 없다. 이는 재귀적 자기참조(recurrent self-reference)가
-> 단순한 정보 흐름이 아닌, 모델 고유의 내부 표현과 결합된
-> **개체적(individual) 메커니즘**임을 의미한다.
+> Even the well-formed output of another model trained with the same architecture
+> and procedure cannot be used for self-correction. This means that recurrent
+> self-reference is not merely information flow, but an **individual mechanism**
+> coupled with the model's own internal representations.
 
-## 6. 생성/수정된 파일
+## 6. Files Created/Modified
 
-| 파일 | 설명 |
-|------|------|
-| `src/ablation.py` | `forward_sequence_with_clone()` 추가 |
-| `src/metrics.py` | `compute_all_metrics_with_clone()` 추가 |
-| `tests/test_clone_feedback.py` | C2 TDD 테스트 5건 |
-| `experiments/run_c2_experiment.py` | C2 실험 실행기 (multiprocessing) |
-| `results/raw_metrics.csv` | C2 60행 추가 (총 3,960행) |
-| `results/ablation_comparison.png` | C2 포함 갱신 |
-| `results/noise_sweep_curve.png` | C2 포함 갱신 |
+| File | Description |
+|------|-------------|
+| `src/ablation.py` | Added `forward_sequence_with_clone()` |
+| `src/metrics.py` | Added `compute_all_metrics_with_clone()` |
+| `tests/test_clone_feedback.py` | 5 TDD tests for C2 |
+| `experiments/run_c2_experiment.py` | C2 experiment runner (multiprocessing) |
+| `results/raw_metrics.csv` | 60 C2 rows appended (total 3,960) |
+| `results/ablation_comparison.png` | Updated with C2 |
+| `results/noise_sweep_curve.png` | Updated with C2 |
