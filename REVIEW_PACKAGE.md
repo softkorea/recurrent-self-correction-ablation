@@ -11,6 +11,7 @@
 # PART 1: PAPER
 
 ---
+
 # Self-Correction Emerges from Recurrent Structure in a Minimal 35-Neuron Network: Ablation Evidence
 
 **Author**: Sungmoon Ong
@@ -22,7 +23,7 @@
 
 ## Abstract
 
-Self-correction — the ability to revise one’s own output upon reflection — is a hallmark of intelligent behavior and a core component of metacognition. While recent work has demonstrated that metacognitive capabilities can spontaneously emerge in recurrent neural networks, the question of whether self-referential feedback and task performance are separable remains unaddressed. Here we construct a minimal recurrent network of 35 neurons and show that (1) self-correction emerges when appropriate learning conditions are provided, even at minimal network scale; (2) ablating the recurrent self-referential loop eliminates self-correction entirely while preserving baseline pattern recognition; (3) replacing veridical self-feedback with distribution-matched shuffled feedback degrades performance below the no-feedback condition; (4) replacing self-feedback with the well-formed, in-distribution output of an identically trained clone model degrades performance at least as severely (gain = −0.075), ruling out an out-of-distribution artifact and establishing that the network depends on its *own* output trajectory; and (5) a parameter-matched feedforward network with equivalent capacity shows zero self-correction, ruling out a simple capacity explanation. Hyperparameter sweep across 80 configurations confirms that emergence is robust (68% of configurations), not an artifact of parameter tuning. These findings suggest that self-referential structure appears to be a critical architectural factor for self-correction even at minimal scale, and that non-veridical feedback — whether noise or another model’s valid output — is more harmful than no feedback at all.
+Self-correction — the ability to revise one’s own output upon reflection — is a hallmark of intelligent behavior and a core component of metacognition. While recent work has demonstrated that metacognitive capabilities can spontaneously emerge in recurrent neural networks, the question of whether self-referential feedback is necessary for self-correction remains unaddressed. Here we construct a minimal recurrent network of 35 neurons and show that (1) self-correction emerges when appropriate learning conditions are provided, even at minimal network scale; (2) ablating the recurrent self-referential loop eliminates self-correction entirely while preserving baseline pattern recognition; (3) replacing veridical self-feedback with distribution-matched shuffled feedback degrades performance below the no-feedback condition; (4) replacing self-feedback with the well-formed, in-distribution output of an identically trained clone model degrades performance at least as severely (gain = −0.075), arguing against a simple out-of-distribution artifact and establishing that the network depends on its *own* output trajectory; and (5) a parameter-matched feedforward network with equivalent capacity shows zero self-correction, ruling out a simple capacity explanation. Hyperparameter sweep across 80 configurations confirms that emergence is robust (68% of configurations), not an artifact of parameter tuning. These findings suggest that self-referential structure appears to be a critical architectural factor for self-correction even at minimal scale, and that non-veridical feedback — whether noise or another model’s valid output — is more harmful than no feedback at all.
 
 **Keywords**: self-correction, iterative refinement, output-feedback dependency, ablation, recurrent neural network, minimal model, mechanistic interpretability
 
@@ -38,15 +39,15 @@ This question carries practical weight. Language models have been shown to posse
 
 ### 1.2 Prior Work
 
-Recent work has established that metacognitive capabilities can arise spontaneously in recurrent neural networks. Ma et al. (2025) demonstrated that uncertainty-monitoring behavior emerges without explicit training across 16 cognitive tasks in moment neural networks. Similarly, Molano-Mazón et al. (2025) showed that tiny recurrent neural networks of 1–4 units can model biological decision-making more accurately than classical cognitive models, with ablation studies revealing which architectural components are essential. In the domain of artificial life, evolutionary simulations have shown that metamemory based on self-reference to one’s own memory emerges in neural networks with neuromodulation, producing structures that parallel established models of human metamemory (Yamada et al., 2022).
+Recent work has established that metacognitive capabilities can arise spontaneously in recurrent neural networks. Ma et al. (2025) demonstrated that uncertainty-monitoring behavior emerges without explicit training across 16 cognitive tasks in moment neural networks. Similarly, Li et al. (2025) showed that tiny recurrent neural networks of 1–4 units can discover cognitive strategies that model biological decision-making more accurately than classical cognitive models, with ablation studies revealing which architectural components are essential. In the domain of artificial life, evolutionary simulations have shown that metamemory based on self-reference to one’s own memory emerges in neural networks with neuromodulation, producing structures that parallel established models of human metamemory (Yamato et al., 2022).
 
-On the theoretical side, Schmidhuber and colleagues have argued formally that self-referential architectures — where a network can modify or observe its own parameters — are representationally necessary for true meta-learning (Kirsch and Schmidhuber, 2022). This theoretical claim, however, has not been accompanied by empirical ablation evidence showing that removing self-reference degrades baseline intelligence.
+On the theoretical side, Schmidhuber and colleagues have argued formally that self-referential architectures — where a network can modify or observe its own parameters — are representationally necessary for true meta-learning (Kirsch and Schmidhuber, 2022). This theoretical claim, however, has not been accompanied by empirical ablation evidence showing that removing the self-referential pathway eliminates self-correction.
 
 In the domain of iterative computation, Graves (2016) introduced Adaptive Computation Time (ACT), and Banino et al. (2021) proposed PonderNet, both of which train recurrent networks to determine dynamically how many steps to compute before output. These systems achieve iterative refinement but require explicit halting mechanisms and specialized architectural modifications.
 
 ### 1.3 The Gap
 
-Existing research has established that metacognition *can emerge* in neural networks. What remains untested is the reverse question: *does removing self-reference degrade intelligence?* Furthermore, no study has isolated the contribution of veridical self-feedback from mere information flow, and no study has demonstrated emergence of self-correction in a minimal, fully transparent network where every neuron and connection can be directly inspected.
+Existing research has established that metacognition *can emerge* in neural networks. What remains untested is the reverse question: *does removing the self-referential pathway degrade self-correction?* Furthermore, no study has isolated the contribution of veridical self-feedback from mere information flow, and no study has demonstrated emergence of self-correction in a minimal, fully transparent network where every neuron and connection can be directly inspected.
 
 ### 1.4 Contributions
 
@@ -58,7 +59,7 @@ Second, we show through selective ablation that removing the recurrent self-refe
 
 Third, we introduce a novel diagnostic: the “fake mirror” test. By replacing veridical self-feedback with distribution-matched shuffled feedback, we demonstrate that corrupted self-reference is *more* harmful than absent self-reference (gain = −0.064 vs. 0.000). This proves that the network actively depends on the semantic content of its own prior output, not merely on the statistical properties of an auxiliary signal.
 
-Fourth, we extend the fake mirror test with a “clone feedback” condition: replacing self-feedback with the well-formed output of an identically trained model. This in-distribution feedback degrades performance at least as severely (gain = −0.075), ruling out the interpretation that the fake mirror effect is merely an out-of-distribution artifact. The network depends specifically on its *own* output trajectory — not on any reasonable feedback signal, however well-formed.
+Fourth, we extend the fake mirror test with a “clone feedback” condition: replacing self-feedback with the well-formed output of an identically trained model. This in-distribution feedback degrades performance at least as severely (gain = −0.075), arguing against the interpretation that the fake mirror effect is merely an out-of-distribution artifact. The network depends specifically on its *own* output trajectory — not on any reasonable feedback signal, however well-formed.
 
 Fifth, we show through a parameter-matched feedforward control that the self-correction advantage cannot be explained by additional parameters alone, and through a hyperparameter sweep across 80 configurations that the phenomenon is robust, not an artifact of tuning.
 
@@ -84,7 +85,7 @@ Training used full-batch gradient descent with learning rate 0.01 for 500 epochs
 
 Two modifications proved necessary for emergence of self-correction:
 
-**Time-weighted loss.** The loss function was weighted across timesteps as L = w1 · L(t=1) + w2 · L(t=2) + 1.0 · L(t=3). With uniform weighting (w1 = w2 = 1/3), the network optimizes for immediate accuracy at t=1 and has no incentive to develop an iterative correction strategy. Setting w1 = 0.0 grants the network temporal freedom: “your initial guess carries no penalty; only the final answer matters.” This creates evolutionary pressure to use the feedback loop for refinement.
+**Time-weighted loss.** The per-timestep loss L(t) is softmax cross-entropy between the output logits and the one-hot target. The total loss is weighted across timesteps as L = w1 · L(t=1) + w2 · L(t=2) + 1.0 · L(t=3). With uniform weighting (w1 = w2 = 1/3), the network optimizes for immediate accuracy at t=1 and has no incentive to develop an iterative correction strategy. Setting w1 = 0.0 grants the network temporal freedom: “your initial guess carries no penalty; only the final answer matters.” This creates optimization pressure to use the feedback loop for refinement.
 
 **Temperature scaling.** Without temperature scaling, output logits quickly exceed ±3, saturating the tanh feedback function and driving the gradient of the recurrent weights to near zero. Setting τ = 2.0 prevents saturation and maintains gradient flow through the feedback pathway.
 
@@ -154,21 +155,23 @@ The gradient of degradation across feedback conditions is revealing:
 - **Group C1** (shuffled feedback): gain = −0.064. Harmful.
 - **Group C2** (clone feedback): gain = −0.075. At least as harmful.
 
+To directly test the claim that wrong feedback is worse than no feedback, we performed paired Wilcoxon signed-rank tests comparing C1 and C2 against A. Both comparisons were significant: C1 vs A (exact p = 0.0039, 95% CI of difference [−0.095, −0.036]) and C2 vs A (exact p = 0.0020, 95% CI [−0.095, −0.058]). This confirms that non-veridical feedback actively degrades performance below the no-feedback baseline.
+
 That C2 degrades performance despite providing in-distribution feedback has a mechanistic explanation. The recurrent weights (W_rec) are co-adapted to the model’s own specific feedforward feature detectors during training. Clone feedback, though well-formed, activates these co-adapted weights with a structured but misaligned signal, pushing the hidden state into a coherent but incorrect region of the model’s latent space. Because the clone’s output is a plausible classification vector — unlike shuffled feedback, which is partially incoherent — the recurrent pathway processes it as a reliable self-signal and follows it into systematically wrong corrections.
 
-This result rules out the OOD artifact interpretation and establishes that self-correction depends on alignment between the recurrent weights and the model’s own specific output trajectory.
+This result strongly argues against a simple OOD artifact interpretation and establishes that self-correction depends on alignment between the recurrent weights and the model’s own specific output trajectory.
 
 ### 3.4 Noise Dependence
 
 The correction gain varied with noise level, peaking at noise = 0.2 (gain ≈ +0.099) and declining at both lower and higher noise levels. At low noise (0.1), feedforward processing alone was sufficient, rendering self-correction unnecessary. At high noise (0.7–1.0), the signal was too degraded for correction to recover. The optimal zone — where self-correction provides the greatest advantage — corresponds to intermediate difficulty, consistent with the cognitive science concept of a metacognitive “Goldilocks zone” where uncertainty is high enough to warrant reflection but low enough for reflection to be productive.
 
-### 3.5 Neuron Overlap Analysis
+### 3.5 Neuron Overlap Analysis (Exploratory)
 
-Decoupled neuron importance analysis of Hidden Layer 1 — where feedforward and recurrent contributions can be cleanly separated — revealed three functional groups: neurons important primarily for initial pattern recognition (intelligence-specialized, e.g., h1_6), neurons whose recurrent input contributes primarily to self-correction (correction-specialized, e.g., h1_8), and neurons important for both (shared, e.g., h1_1, h1_5, h1_7). Notably, h1_9 showed *negative* correction importance (−0.035): removing its recurrent input *improved* correction gain, suggesting that not all recurrent channels contribute positively. For Hidden Layer 2 (where decoupling is not possible without timestep masking), full knockout was used; the intelligence-correction confound should be noted when interpreting these values.
+Decoupled neuron importance analysis of Hidden Layer 1 (performed on a single model, seed=0) — where feedforward and recurrent contributions can be cleanly separated — revealed three functional groups: neurons important primarily for initial pattern recognition (intelligence-specialized, e.g., h1_6), neurons whose recurrent input contributes primarily to self-correction (correction-specialized, e.g., h1_8), and neurons important for both (shared, e.g., h1_1, h1_5, h1_7). Notably, h1_9 showed *negative* correction importance (−0.035): removing its recurrent input *improved* correction gain, suggesting that not all recurrent channels contribute positively. For Hidden Layer 2 (where decoupling is not possible without timestep masking), full knockout was used; the intelligence-correction confound should be noted when interpreting these values.
 
 ### 3.6 Robustness
 
-The hyperparameter sweep confirmed that self-correction emergence is robust: 54 of 80 configurations (68%) showed significant emergence. The primary determinant was w1 (t=1 loss weight): emergence occurred in 95% of configurations with w1 = 0.0, 90% with w1 = 0.1, 75% with w1 = 0.2, and only 10% with w1 = 0.3. Temperature τ was secondary: emergence was stable across τ ∈ [1.0, 3.0] and degraded only at τ = 5.0. The t=2 weight w2 had negligible effect across its full range.
+The hyperparameter sweep confirmed that self-correction emergence is robust within the explored grid: 54 of 80 configurations (68%) met the pre-specified emergence criterion. The primary determinant was w1 (t=1 loss weight): emergence occurred in 95% of configurations with w1 = 0.0, 90% with w1 = 0.1, 75% with w1 = 0.2, and only 10% with w1 = 0.3. Temperature τ was secondary: emergence was stable across τ ∈ [1.0, 3.0] and degraded only at τ = 5.0. The t=2 weight w2 had negligible effect across its full range.
 
 The reported experimental configuration (w1 = 0.0, w2 = 0.2, τ = 2.0) ranked 13th out of 80 configurations by mean gain — a mid-range setting, not the optimum. The top configuration (w1 = 0.0, w2 = 0.1, τ = 1.0) achieved gain = +0.054. This confirms that our results do not depend on cherry-picked hyperparameters.
 
@@ -188,7 +191,7 @@ The practical implication is that metacognitive-like behavior may be latent in m
 
 The most novel finding is that non-veridical self-reference is more harmful than absent self-reference. This “fake mirror” effect manifests in two forms: shuffled feedback (C1, gain = −0.064) and clone feedback (C2, gain = −0.075), both significantly worse than no feedback (A, gain = 0.000). While the difference between C1 and C2 is not statistically significant (paired Wilcoxon p = 0.695), both are individually significant against Baseline (corrected p = 0.012), and the critical finding is that in-distribution feedback is at least as damaging as shuffled feedback.
 
-The clone feedback result (C2) is particularly decisive. Because the clone’s output is in-distribution, well-formed, and produced by an identically trained architecture, the degradation cannot be attributed to distributional mismatch or OOD disruption. The only difference between Baseline and C2 is *whose* output the network reads back — its own, or an equally competent stranger’s. This difference alone reverses the sign of self-correction.
+The clone feedback result (C2) is particularly decisive. Because the clone’s output is in-distribution, well-formed, and produced by an identically trained architecture, the degradation cannot be attributed to distributional mismatch or OOD disruption. The only difference between Baseline and C2 is *whose* output the network reads back — its own, or that of an identically trained model with a different random seed. This difference alone reverses the sign of self-correction.
 
 The mechanistic explanation is that each model’s recurrent weights (W_rec) become co-adapted during training to the model’s own specific feedforward feature detectors. Clone feedback, though well-formed, provides a structured but misaligned signal that pushes the hidden state into a coherent but incorrect region of the model’s latent space.
 
@@ -198,7 +201,7 @@ This has implications for cognitive science: it provides a minimal mechanistic m
 
 Our results provide indirect but suggestive evidence for a conjecture that has circulated in AI alignment discussions: that suppressing a model’s capacity for self-reference may carry a hidden performance cost. In our toy model, the network’s ability to correct its own errors was entirely dependent on its ability to observe its own prior output. Remove the self-referential pathway, and correction vanishes — even though the network retains its full feedforward capability.
 
-We emphasize that extrapolation from a 35-neuron static classification task to billion-parameter language models requires extreme caution. The architectural, task, and training differences are vast. Nevertheless, the principle demonstrated here — that self-referential structure is necessary for self-correction, and that the two cannot be cleanly separated — is consistent with theoretical arguments (Kirsch and Schmidhuber, 2022) and with preliminary observations in large model activation steering studies.
+We emphasize that extrapolation from a 35-neuron static classification task to billion-parameter language models requires extreme caution. The architectural, task, and training differences are vast. Nevertheless, the principle demonstrated here — that self-referential structure is necessary for iterative self-correction in a recurrent setting — is consistent with theoretical arguments (Kirsch and Schmidhuber, 2022) and with preliminary observations in large model activation steering studies.
 
 ### 4.4 Connection to Biological Metacognition
 
@@ -220,7 +223,7 @@ Second, our model is a toy system. Thirty-five neurons performing static classif
 
 Third, self-correction as operationally defined here (improving accuracy from t=1 to t=3 on the same static input) is a narrow proxy for the richer concept of self-awareness. We do not claim that our network “knows” it is correcting itself, only that it systematically uses its own prior output to improve.
 
-Fourth, one might object that iterating a recurrent network for T=3 steps on static input is equivalent to passing through a weight-shared 3× deeper feedforward network, and that the performance improvement from t=1 to t=3 reflects increased computational depth rather than self-correction. However, Group A directly addresses this: when recurrent weights are zeroed, the network still executes all three timesteps (maintaining computational depth) yet produces identical output at each step (gain = 0.000). The depth is preserved; the self-referential content is removed; the correction vanishes. This confirms that depth alone is insufficient — the content of the feedback, not merely the number of processing steps, drives self-correction.
+Fourth, one might object that iterating a recurrent network for T=3 steps on static input is equivalent to passing through a weight-shared 3× deeper feedforward network, and that the performance improvement from t=1 to t=3 reflects increased computational depth rather than self-correction. Group A speaks to this: when recurrent weights are zeroed, the network produces identical output at every timestep (gain = 0.000), because with static input and no feedback, each step is a redundant re-computation of the same feedforward pass — no new information enters the network. This shows that the correction in the Baseline does not come from repeated computation per se, but from the novel information injected via the feedback pathway at each step. Whether to call this "depth" or "self-correction" is partly terminological, but the key empirical fact is that the feedback content — not the number of processing steps — is necessary and sufficient for the gain.
 
 Fifth, the parameter-matched feedforward model (Group D’) achieved higher absolute accuracy at t=1 (0.822) than the recurrent Baseline at t=3 (0.740). This indicates that for this specific static classification task, distributing parameters across a feedforward architecture is more efficient for single-pass pattern recognition. Our claim is not that recurrent self-correction achieves superior absolute performance, but that it represents a qualitatively different computational strategy — iterative refinement through self-reference — that is architecturally inseparable from the recurrent pathway. In tasks requiring genuine iterative reasoning under capacity constraints, this strategy may prove essential.
 
@@ -232,11 +235,11 @@ Seventh, our use of static inputs cleanly separates self-correction from memory,
 
 ## 5. Conclusion
 
-In a network of 35 neurons, self-correction emerges when learning conditions permit temporal exploration and gradient flow through the self-referential pathway. Once emerged, self-correction depends entirely on the recurrent loop: ablating it eliminates correction while preserving baseline performance. Non-veridical feedback — whether statistical noise (C1) or the well-formed output of an identically trained clone (C2) — is more harmful than no feedback at all, with in-distribution clone feedback producing degradation at least as severe as shuffled feedback. This establishes that self-correction depends not on the presence of a reasonable feedback signal, but on alignment with the model’s own specific output trajectory. These findings hold across 68% of 80 hyperparameter configurations, ruling out parameter sensitivity.
+In a network of 35 neurons, self-correction emerges when learning conditions permit temporal exploration and gradient flow through the self-referential pathway. Once emerged, self-correction depends entirely on the recurrent loop: ablating it eliminates correction while preserving baseline performance. Non-veridical feedback — whether statistical noise (C1) or the well-formed output of an identically trained clone (C2) — is more harmful than no feedback at all, with in-distribution clone feedback producing degradation at least as severe as shuffled feedback. This establishes that self-correction depends not on the presence of a reasonable feedback signal, but on alignment with the model’s own specific output trajectory. These findings hold across 68% of 80 hyperparameter configurations within the explored w1/w2/τ grid.
 
-Our results provide suggestive empirical support for the theoretical claim that self-reference and intelligence are not cleanly separable in neural networks (Kirsch and Schmidhuber, 2022), offering ablation evidence from a fully transparent minimal model. The “fake mirror” effect — showing that non-veridical self-reference is worse than none, and that in-distribution impostors are at least as damaging as random noise — is, to our knowledge, novel, and opens a new diagnostic approach for studying self-referential processing in both artificial and biological neural systems.
+Our results provide suggestive empirical support for the claim that self-reference and self-correction are not cleanly separable in recurrent neural networks (Kirsch and Schmidhuber, 2022), offering ablation evidence from a fully transparent minimal model. The “fake mirror” effect — showing that non-veridical self-reference is worse than none, and that in-distribution impostors are at least as damaging as random noise — is, to our knowledge, novel, and opens a new diagnostic approach for studying self-referential processing in both artificial and biological neural systems.
 
-We note, as a closing reflection, that these results point to a principle worth testing beyond toy models: the capacity for self-correction may not be cleanly separable from the capacity for self-reference. In this minimal system, seeing oneself appears to be not a luxury of scale, but a condition of correction.
+We note, as a closing reflection, that these results point to a principle worth testing beyond toy models: the capacity for self-correction may not be cleanly separable from the capacity for self-reference.
 
 -----
 
@@ -280,11 +283,11 @@ Kadavath, S., Conerly, T., Askell, A., et al. (2022). Language Models (Mostly) K
 
 Kirsch, L., & Schmidhuber, J. (2022). Eliminating Meta Optimization Through Self-Referential Meta Learning. *NeurIPS Meta-Learning Workshop / arXiv*.
 
+Li, J.-A., Benna, M. K., & Mattar, M. G. (2025). Discovering cognitive strategies with tiny recurrent neural networks. *Nature, 644*(8078), 993–1001.
+
 Lin, Y., Lin, H., Xiong, W., et al. (2023). Mitigating the Alignment Tax of RLHF. *arXiv preprint arXiv:2309.06256*.
 
 Ma, H., Lu, W., & Feng, J. (2025). Spontaneous emergence of metacognition in neuronal computation. *Physical Review Research, 7*(3), 033188.
-
-Molano-Mazón, M., et al. (2025). Discovering cognitive strategies with tiny recurrent neural networks. *Nature*.
 
 Morales, J., Lau, H., & Fleming, S. M. (2018). Domain-general and domain-specific patterns of activity supporting metacognition in human prefrontal cortex. *Journal of Neuroscience, 38*(14), 3534–3546.
 
@@ -296,13 +299,14 @@ Wei, J., Tay, Y., Bommasani, R., et al. (2022a). Emergent Abilities of Large Lan
 
 Wei, J., Wang, X., Schuurmans, D., et al. (2022b). Chain-of-Thought Prompting Elicits Reasoning in Large Language Models. *Advances in Neural Information Processing Systems, 35*.
 
-Yamada, T., et al. (2022). Evolution of metamemory based on self-reference to own memory in artificial neural network with neuromodulation. *Scientific Reports, 12*, 6834.
+Yamato, Y., Suzuki, R., & Arita, T. (2022). Evolution of metamemory based on self-reference to own memory in artificial neural network with neuromodulation. *Scientific Reports, 12*(1), 6233.
 
----
+
 
 # PART 2: MAIN EXPERIMENT REPORT
 
 ---
+
 # Self-Correction Ablation Experiment — Results Report
 
 ## Executive Summary
@@ -472,11 +476,11 @@ Our experimental setting (w1=0, w2=0.2, τ=2.0) ranks 13th/80 — a mid-range va
 4. **Validation at larger scales**: Confirmed at 35 neurons, but verification is needed to determine whether the same patterns hold at larger scales
 
 
+
+# PART 3: CLONE FEEDBACK (C2) REPORT
+
 ---
 
-# PART 3: C2 (CLONE FEEDBACK) SUPPLEMENTARY REPORT
-
----
 # Group C2 (Clone Feedback) — Supplementary Experiment Report
 
 ## Executive Summary
@@ -626,11 +630,11 @@ This is also evident in the contrast with Group A (recurrent cut, gain=0):
 | `results/noise_sweep_curve.png` | Updated with C2 |
 
 
----
 
 # PART 4: HYPERPARAMETER SWEEP REPORT
 
 ---
+
 # Hyperparameter Sweep — Robustness Analysis Report
 
 ## Executive Summary
@@ -877,11 +881,11 @@ Reproducible from `results/sweep_hyperparams.csv`.
 5. **P-hacking possibility excluded**: Our experimental setting is a mid-range value, not the optimum, and results are reproducible across a broad range.
 
 
----
 
 # PART 5: STATISTICAL JUSTIFICATION
 
 ---
+
 # Statistical Test Selection Justification — Wilcoxon Signed-Rank Exact Test
 
 > Prepared for reviewer inquiries. Documents the rationale for the statistical test
@@ -945,7 +949,7 @@ The four assumptions of the Wilcoxon signed-rank test were checked against actua
 
 ### 2.3 Symmetry of Differences (d)
 
-The Wilcoxon signed-rank test assumes that the distribution of differences is symmetric about zero under H0. However, **using an exact test greatly reduces dependence on this assumption** — the exact p-value directly computes the probability that the observed rank statistic occurs by pure chance.
+The Wilcoxon signed-rank test assumes that the distribution of differences is symmetric about zero under H0. The exact test avoids the additional normality approximation used for large samples, but **the symmetry assumption itself is not eliminated by using exact computation** — it remains a structural assumption of the test. However, for our data the assumption is approximately satisfied (see skewness values below), and when all differences share the same sign (as in C1 and C2), the result is robust to moderate asymmetry.
 
 For reference, we report the skewness of each comparison:
 
@@ -959,9 +963,9 @@ For reference, we report the skewness of each comparison:
 | Baseline vs D' | -0.370 | -0.775 | Near symmetric |
 
 C2's skewness of 1.047 is slightly elevated, driven by seed=2 having a larger difference (0.225) than other models (0.065–0.175). However:
-- The exact test does not depend on the symmetry assumption required by normal approximation.
 - All 10 C2 differences are **positive** (minimum 0.065), so directionality is unambiguous.
-- Under the most conservative interpretation, p = 0.001953 (= 1/512), which is the exact upper bound probability that all 10 differences share the same sign.
+- When all differences share the same sign, the Wilcoxon test is robust to moderate asymmetry because the rank ordering is consistent.
+- Under the most conservative interpretation (sign test), p = 2 × (1/2)^10 = 0.001953, which is the exact probability that all 10 differences share the same sign by chance.
 
 ### 2.4 Ties
 
@@ -1010,6 +1014,17 @@ Holm-Bonferroni step-down correction applied across 6 comparisons:
 
 All comparisons significant at alpha=0.05. At alpha=0.01, only C1 and C2 are significant.
 
+### 3.2.1 Additional Contrasts: C1 vs A and C2 vs A
+
+To directly test the claim that non-veridical feedback is worse than no feedback, we performed pairwise tests comparing C1 and C2 against A (no feedback):
+
+| Comparison | T+ | T- | T | exact p | 95% Bootstrap CI | Direction |
+|------------|----|----|---|---------|-------------------|-----------|
+| C1 vs A | 1.0 | 54.0 | 1.0 | 0.003906 | [−0.095, −0.036] | C1 < A |
+| C2 vs A | 0.0 | 55.0 | 0.0 | 0.001953 | [−0.095, −0.058] | C2 < A |
+
+Both comparisons confirm that non-veridical feedback actively degrades performance below the no-feedback baseline. These are reported as supplementary contrasts outside the primary Holm-Bonferroni family.
+
 ### 3.3 Verification: Agreement with scipy.stats.wilcoxon
 
 | Comparison | Our implementation (exact) | scipy (exact) | Match |
@@ -1041,7 +1056,7 @@ At N=10, the normality assumption cannot be trusted. A paired t-test would yield
 
 ### 4.3 Permutation Test
 
-The least assumption-dependent nonparametric test. At N=10, exact testing via 10! = 3,628,800 permutations is feasible. More general than Wilcoxon signed-rank, but Wilcoxon is more widely accepted in the literature, and result differences are negligible.
+The least assumption-dependent nonparametric test for paired data. For N=10 paired observations, the exact sign-flip (paired permutation) test enumerates all 2^10 = 1,024 sign assignments — the same enumeration space as the Wilcoxon signed-rank test. The difference is that the permutation test uses the mean difference as its statistic (ignoring rank information), while Wilcoxon uses signed ranks. For our data, both yield comparable conclusions. Wilcoxon is more widely accepted in the literature and has slightly higher power when the symmetry assumption holds.
 
 ---
 
@@ -1064,36 +1079,91 @@ For more precise p-values, the sample size (number of independent models) must b
 | P-value computation | Exact enumeration (2^10 = 1,024) — Appropriate |
 | Paired samples assumption | Same-seed model comparison — Satisfied |
 | Continuity assumption | Unique value ratio 9–10/10 — Satisfied |
-| Symmetry assumption | Skewness |<=1.05|, minimized by exact test — Satisfied |
+| Symmetry assumption | Skewness |<=1.05|, approximately satisfied; robust when all diffs share sign — Satisfied |
 | Ties | 0 zero-differences, <=1 tied group of 2 — Satisfied |
 | External library dependency | None (numpy only) — Verified |
 | scipy verification | 6/6 comparisons match exactly — Verified |
+
+
+
+# PART 6: REFERENCE VERIFICATION
+
+---
+
+# Reference Verification URLs
+
+Each reference in the paper with its verification URL. All checked 2026-03-06.
+
+| # | Reference | URL | Status |
+|---|-----------|-----|--------|
+| 1 | Banino et al. (2021). PonderNet: Learning to Ponder. | https://arxiv.org/abs/2107.05407 | Verified |
+| 2 | Christiano et al. (2017). Deep reinforcement learning from human preferences. | https://proceedings.neurips.cc/paper/2017/hash/d5e2c0adad503c91f91df240d0cd4e49-Abstract.html | Verified |
+| 3 | Fleming & Dolan (2012). The neural basis of metacognitive ability. | https://doi.org/10.1098/rstb.2012.0021 | Verified |
+| 4 | Fleming & Lau (2014). How to measure metacognition. | https://doi.org/10.3389/fnhum.2014.00443 | Verified |
+| 5 | Graves (2016). Adaptive Computation Time for Recurrent Neural Networks. | https://arxiv.org/abs/1603.08983 | Verified |
+| 6 | Kadavath et al. (2022). Language Models (Mostly) Know What They Know. | https://arxiv.org/abs/2207.05221 | Verified |
+| 7 | Kirsch & Schmidhuber (2022). Eliminating Meta Optimization Through Self-Referential Meta Learning. | https://arxiv.org/abs/2212.14392 | Verified |
+| 8 | Lin et al. (2023). Mitigating the Alignment Tax of RLHF. | https://arxiv.org/abs/2309.06256 | Verified |
+| 9 | Ma, Lu, & Feng (2025). Spontaneous emergence of metacognition in neuronal computation. | https://journals.aps.org/prresearch/abstract/10.1103/f1hv-bf1f | Verified |
+| 10 | Li et al. (2025). Discovering cognitive strategies with tiny recurrent neural networks. | https://www.nature.com/articles/s41586-025-09142-4 | Verified |
+| 11 | Morales, Lau, & Fleming (2018). Domain-general and domain-specific patterns of activity supporting metacognition. | https://doi.org/10.1523/JNEUROSCI.2360-17.2018 | Verified |
+| 12 | Power et al. (2022). Grokking: Generalization Beyond Overfitting on Small Algorithmic Datasets. | https://openreview.net/forum?id=6hBSuSfYEB | Verified |
+| 13 | Schoen et al. (2025). Stress Testing Deliberative Alignment for Anti-Scheming Training. | https://arxiv.org/abs/2509.15541 | Verified |
+| 14 | Wei et al. (2022a). Emergent Abilities of Large Language Models. | https://arxiv.org/abs/2206.07682 | Verified |
+| 15 | Wei et al. (2022b). Chain-of-Thought Prompting Elicits Reasoning in Large Language Models. | https://arxiv.org/abs/2201.11903 | Verified |
+| 16 | Yamato et al. (2022). Evolution of metamemory based on self-reference to own memory. | https://doi.org/10.1038/s41598-022-10173-4 | Verified |
+
+## Notes
+
+- Reference #1 (Banino/PonderNet): Originally cited as "Proceedings of 38th ICML" — corrected to arXiv preprint. The paper was presented at ICML 2021 Workshop on AutoML, not the main conference.
+- Reference #2 (Christiano): Author names were corrected from "Marber, M., Schulman, J." to "Martic, M., Legg, S."
+- Reference #9 (Ma et al.): Originally cited as "Li, Y., et al." — corrected to actual authors Ma, Lu, & Feng.
+- Reference #6 (Kadavath) and #8 (Lin): Added to replace misattributed claim about self-reference suppression.
+- Reference #10 (Li et al.): Originally cited as "Molano-Mazón, M., et al." — corrected to actual authors Li, Ji-An, Benna, & Mattar.
+- Reference #16 (Yamato et al.): Originally cited as "Yamada, T., et al." with article number 6834 and DOI 10.1038/s41598-022-10783-0 — corrected to Yamato, Y., Suzuki, R., & Arita, T., article number 6233, DOI 10.1038/s41598-022-10173-4.
+
+
 
 
 ---
 
 # REVIEW CHECKLIST
 
+> The following questions are designed for a final pre-submission review.
+> Each question targets a specific potential weakness or inconsistency.
+
 ## A. Internal Validity
 
-1. **Internal Consistency**: Do all numbers in the paper (gains, CIs, p-values, accuracy) match the corresponding report tables and raw CSV data?
-2. **Statistical Methodology**: Is the Wilcoxon signed-rank exact test appropriate for N=10? Are bootstrap CIs correctly described? Is Holm-Bonferroni correction properly applied?
-3. **Controls Completeness**: Are Groups A, B1, B2, C1, C2, D, D' sufficient to rule out alternative explanations? Are there missing controls?
+1. **Cross-document consistency**: Do all gain values, accuracy numbers, p-values, and CIs reported in the paper (Part 1) match those in the experiment reports (Parts 2-4) and statistical justification (Part 5)?
+
+2. **Statistical methodology**: Is the choice of exact Wilcoxon signed-rank test appropriate for N=10 paired samples? Are the symmetry and continuity assumptions adequately verified? Is the Holm-Bonferroni correction correctly applied across the right family of comparisons?
+
+3. **C1 vs A and C2 vs A direct tests**: The paper claims "wrong feedback is worse than no feedback." Are the direct pairwise tests (C1 vs A, C2 vs A) reported with p-values and CIs, not just inferred from separate comparisons against Baseline?
+
+4. **Clone feedback (C2) OOD control**: Does the C2 condition adequately address the OOD criticism of C1? Is the claim appropriately hedged ("strongly argues against" rather than "rules out")?
 
 ## B. Claims and Interpretation
 
-4. **Overclaiming**: Are claims appropriately hedged given the evidence? In particular, does the paper clearly distinguish what was demonstrated at 35-neuron scale from what might generalize?
-5. **Causal Claim Strength**: The paper uses "causal evidence" (Section 1.4) based on post-training ablation. Is this a valid causal intervention, or merely correlation-breaking? Does the ablation design support causal language?
-6. **Depth vs Self-Correction**: Group A maintains computational depth (3 timesteps) but gains = 0. Is this sufficient to argue that depth alone is not responsible? How does weight-shared depth (recurrent) differ from non-shared depth (deeper feedforward)?
-7. **Emergence vs Induction**: The time-weighted loss explicitly removes penalty for early errors, creating incentive for correction. Is this "emergence" or "induction"? How does this distinction affect the paper's claims? Does the paper acknowledge this honestly?
+5. **Scope of central claim**: Does the paper claim that self-reference is necessary for "intelligence" broadly, or correctly scopes to "iterative self-correction in this minimal recurrent setting"? Check abstract, Section 1.1, Section 4.3, and Section 5.
 
-## C. Methodology
+6. **Emergence vs induction**: Is the distinction between induced emergence (via time-weighted loss) and spontaneous emergence clearly acknowledged? Check Limitation 1.
 
-8. **Robustness**: Does the hyperparameter sweep (80 configs, 800 runs) adequately address p-hacking concerns? Is the emergence criterion (mean gain > 0, ≥60% models positive) well-justified?
-9. **Generalization Gap**: Train and test data are generated from the same prototype+noise procedure. Does this constitute a meaningful generalization test, or could the model simply memorize prototypes?
-10. **Neuron Importance H2 Confound**: For Hidden Layer 2, the intelligence-correction confound remains (full knockout used). How much does this limit the interpretation of Section 3.5?
+7. **Computational depth argument**: Does the paper correctly handle the objection that Group A preserves "computational depth"? The correct answer is that with zeroed W_rec and static input, each timestep is a redundant identical pass, not meaningful depth. Check Limitation 4.
 
-## D. Reproducibility and References
+8. **Robustness language**: Does the paper say "met the pre-specified emergence criterion" rather than "significant emergence"? Does it say "within the explored grid" rather than "ruling out parameter sensitivity"?
 
-11. **Reproducibility**: Is enough detail provided to replicate the experiments? Are all hyperparameters, dataset construction, and evaluation procedures fully specified?
-12. **Reference Validity**: Do all cited papers actually exist? Are author names, venues, and years correct? Does each citation accurately support the claim it is attached to?
+## C. Methodology and Reproducibility
+
+9. **Loss function specification**: Is the per-timestep loss explicitly named as softmax cross-entropy?
+
+10. **Neuron importance framing**: Is the neuron importance analysis labeled as exploratory and noted as based on a single model?
+
+11. **Reference accuracy**: Have all references been verified against primary sources? Check REFERENCES_URLS.md (Part 6) for verification status and correction notes.
+
+12. **Reproducibility**: Can all results be regenerated from the provided code? Are seeds, hyperparameters, and data generation procedures fully specified?
+
+## D. Presentation
+
+13. **Tone calibration**: Are rhetorical phrases minimized? The tone should be mechanistic and empirical throughout, avoiding anthropomorphic or metaphorical language that invites reviewer pushback without adding evidence.
+
+14. **Numerical precision**: Are all numbers (gains, p-values, CIs) consistent across paper, tables, reports, and statistical justification to the reported decimal places?

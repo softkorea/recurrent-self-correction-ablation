@@ -23,7 +23,19 @@ Thumbs.db
 emergence-suggestion.txt
 hyperparameter sweep.txt
 generate_source_tree.py
+generate_review_package.py
 source_tree.md
+
+# LaTeX build artifacts
+paper/*.aux
+paper/*.bbl
+paper/*.blg
+paper/*.log
+paper/*.out
+paper/*.synctex*
+paper/*.fls
+paper/*.fdb_latexmk
+paper/tmlr.sty
 
 # Claude Code
 .claude/
