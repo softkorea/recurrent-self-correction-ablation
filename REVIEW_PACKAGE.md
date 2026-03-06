@@ -257,7 +257,7 @@ Sungmoon Ong conceived the hypothesis, designed the experiment, implemented the 
 
 ## Acknowledgments
 
-The experimental design benefited from structured review by AI systems that identified critical methodological improvements: the static-input task design that separates memory from self-reference, the scrambled feedback control group, the clone feedback control group that rules out OOD artifacts, multi-seed validation, temperature scaling for gradient flow, time-weighted loss for emergence induction, parameter-matched feedforward control, structured ablation control, noise-level sweep, and statistical design refinements including bootstrap confidence intervals and multiple comparison correction. The author takes full responsibility for all scientific claims and interpretations.
+The experimental design benefited from structured review by AI systems that identified critical methodological improvements: the static-input task design that separates memory from self-reference, the scrambled feedback control group, the clone feedback control group that addresses OOD artifacts, multi-seed validation, temperature scaling for gradient flow, time-weighted loss for emergence induction, parameter-matched feedforward control, structured ablation control, noise-level sweep, and statistical design refinements including bootstrap confidence intervals and multiple comparison correction. The author takes full responsibility for all scientific claims and interpretations.
 
 -----
 
