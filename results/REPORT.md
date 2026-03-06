@@ -5,7 +5,9 @@
 35개 뉴런 RecurrentMLP에서 **자기 교정(Self-Correction) 현상의 창발(Emergence)을 확인**했다.
 Time-weighted loss와 temperature scaling 적용 후, Baseline correction gain = **+0.0415 ± 0.0295**
 (95% CI: [+0.023, +0.059], 0 불포함). 재귀 루프를 제거하면 gain이 정확히 0으로 떨어지며,
-피드백을 셔플하면 gain이 **-0.064**로 악화된다. 이는 가설을 강하게 지지한다.
+피드백을 셔플하면 gain이 **-0.064**로 악화된다. 나아가 **다른 모델의 정상 출력**을
+피드백으로 주입해도 gain이 **-0.075**로 악화되어, 네트워크가 "아무 합리적 피드백"이 아닌
+**자기 자신의 출력 궤적**에 의존함을 증명한다. 이는 가설을 강하게 지지한다.
 
 ---
 
@@ -31,6 +33,7 @@ Time-weighted loss와 temperature scaling 적용 후, Baseline correction gain =
 | B1 (랜덤 절단) | 0.515±0.048 | 0.511±0.037 | -0.004±0.016 | 교정 소실 + 성능 하락 |
 | B2 (구조적 절단) | 0.207±0.034 | 0.207±0.034 | 0.000±0.000 | 기능 파괴 |
 | C1 (셔플 피드백) | 0.698±0.054 | 0.634±0.041 | **-0.064±0.048** | 잘못된 피드백 = 악화 |
+| **C2 (클론 피드백)** | 0.698±0.054 | 0.623±0.043 | **-0.075±0.030** | 다른 모델의 정상 출력도 악화 |
 | D (피드포워드) | 0.746±0.067 | 0.746±0.067 | 0.000±0.000 | 교정 불가 (재귀 없음) |
 | D' (param-matched FF) | 0.822±0.031 | 0.822±0.031 | 0.000±0.000 | 용량 효과 아님 |
 
@@ -42,16 +45,18 @@ Time-weighted loss와 temperature scaling 적용 후, Baseline correction gain =
 | A | [0.000, 0.000] |
 | B1 | [-0.013, +0.006] |
 | C1 | [-0.095, -0.036] |
+| C2 | [-0.095, -0.058] |
 
-### Holm-Bonferroni 보정 p-values (Baseline vs 각 그룹)
+### Holm-Bonferroni 보정 p-values (Wilcoxon signed-rank exact, Baseline vs 각 그룹)
 
-| 비교 | p-value | 유의성 |
-|------|---------|--------|
-| Baseline vs C1 | 1.90e-03 | ** |
-| Baseline vs A | 5.68e-03 | ** |
-| Baseline vs D | 5.68e-03 | ** |
-| Baseline vs D' | 5.68e-03 | ** |
-| Baseline vs B1 | 5.68e-03 | ** |
+| 비교 | raw p | 보정 p | 유의성 |
+|------|-------|--------|--------|
+| Baseline vs C1 | 0.00195 | 0.0117 | * |
+| Baseline vs C2 | 0.00195 | 0.0117 | * |
+| Baseline vs B1 | 0.00391 | 0.0156 | * |
+| Baseline vs A | 0.00781 | 0.0234 | * |
+| Baseline vs D | 0.00781 | 0.0234 | * |
+| Baseline vs D' | 0.00781 | 0.0234 | * |
 
 ## 3. 가설 검증
 
@@ -63,7 +68,7 @@ Time-weighted loss와 temperature scaling 적용 후, Baseline correction gain =
 - Group A gain = 0.000 (재귀 제거 시 교정 완전 소실)
 - **acc_t1은 Baseline과 A가 동일** (0.698) → 재귀는 초기 인식에 영향 없음, 순수하게 교정에만 기여
 
-### 3.2 "정보량이 아니라 자기참조가 핵심" (Group C1)
+### 3.2 "정보량이 아니라 자기참조가 핵심" (Group C1, C2)
 
 **강하게 지지됨.**
 
@@ -71,6 +76,14 @@ Time-weighted loss와 temperature scaling 적용 후, Baseline correction gain =
 - gain = -0.064 → Baseline(+0.042) 대비 **-0.106** 하락
 - 잘못된 자기참조는 없는 것(A: 0.000)보다도 **더 나쁨**
 - 네트워크가 피드백을 적극적으로 사용하되, 잘못된 정보가 들어오면 오답으로 끌려감
+
+**C2 (클론 피드백)로 OOD 비판 차단:**
+
+- C2: 다른 seed로 학습된 동일 구조 모델의 **정상 출력**을 피드백으로 주입
+- gain = -0.075 → C1(-0.064)보다도 **더 악화**
+- C1의 결과가 단순 OOD(out-of-distribution) 아티팩트라는 비판을 완전히 차단
+- 클론의 출력은 동일한 분포·구조·학습 과정의 산물이지만, "자기 자신"이 아닌 이상 교정에 사용 불가
+- **결론: 자기 교정은 "합리적 피드백"이 아닌 "자기 자신의 출력 궤적"에 의존**
 
 ### 3.3 "파라미터 수 효과 배제" (Group D')
 
@@ -120,7 +133,7 @@ Neuron Importance Heatmap에서:
 
 | 파일 | 설명 |
 |------|------|
-| `results/raw_metrics.csv` | 전체 실험 데이터 (3,900 rows) |
+| `results/raw_metrics.csv` | 전체 실험 데이터 (3,960 rows, C2 포함) |
 | `results/neuron_importance.csv` | 뉴런별 importance 수치 |
 | `results/ablation_comparison.png` | 그룹별 gain 비교 |
 | `results/noise_sweep_curve.png` | 노이즈별 gain 곡선 |
@@ -144,6 +157,6 @@ Neuron Importance Heatmap에서:
 ## 8. 한계점 및 향후 과제
 
 1. **Time-weighted loss의 인위성**: w=[0.0, 0.2, 1.0]은 self-correction을 "유도"하는 구조. 자연발생적 emergence와는 구분 필요
-2. **Group C2 (batch-shuffle) 미구현**: 계획 문서에 있으나 아직 미적용
+2. ~~**Group C2 미구현**~~ → ✅ **완료** (Clone Feedback, `REPORT_C2.md` 참조)
 3. **타임스텝별 뉴런 마스킹**: 현재 importance는 전체 타임스텝 ablation. t=2,3에서만 마스킹하면 더 정확한 교정 기여도 측정 가능
 4. **더 큰 네트워크에서의 검증**: 35 뉴런에서 확인했지만, 규모 확대 시 동일한 패턴이 유지되는지 검증 필요

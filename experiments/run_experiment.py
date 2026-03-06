@@ -141,7 +141,7 @@ def run_full_experiment():
 
     # 모든 (seed, noise) 조합 생성
     tasks = [(seed, nl) for nl in NOISE_LEVELS for seed in range(N_MODELS)]
-    n_workers = min(mp.cpu_count(), len(tasks))
+    n_workers = min(max(1, mp.cpu_count() - 4), len(tasks))
 
     print(f"[EXP] Starting: {len(tasks)} tasks on {n_workers} workers "
           f"({N_MODELS} models x {len(NOISE_LEVELS)} noise levels)", flush=True)
@@ -279,7 +279,7 @@ def run_full_experiment():
             print(f"  {g:12s}: [{np.percentile(boot, 2.5):+.4f}, {np.percentile(boot, 97.5):+.4f}]", flush=True)
 
     # Holm-Bonferroni (모델 단위 paired comparison)
-    from scipy import stats as scipy_stats
+    from src.metrics import wilcoxon_exact
     print("\nHolm-Bonferroni corrected p-values (Baseline vs each, noise=0.5, N=10):", flush=True)
     baseline_gains = np.array(model_gains.get('Baseline', []))
     p_values = {}
@@ -287,7 +287,7 @@ def run_full_experiment():
         if g in model_gains:
             g_gains = np.array(model_gains[g])
             if len(g_gains) > 1 and len(baseline_gains) > 1:
-                _, p = scipy_stats.mannwhitneyu(baseline_gains, g_gains, alternative='two-sided')
+                _, p = wilcoxon_exact(baseline_gains, g_gains)
                 p_values[g] = p
 
     if p_values:

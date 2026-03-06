@@ -98,7 +98,7 @@ def run_sweep():
              for w1, w2, tau in configs
              for seed in range(N_MODELS)]
 
-    n_workers = min(mp.cpu_count(), len(tasks))
+    n_workers = min(max(1, mp.cpu_count() - 4), len(tasks))
     print(f"[SWEEP] {len(configs)} configs × {N_MODELS} models = {len(tasks)} tasks "
           f"on {n_workers} workers", flush=True)
 

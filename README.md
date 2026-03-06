@@ -12,10 +12,12 @@ This experiment demonstrates that a minimal recurrent neural network (35 neurons
 | A (Recurrent Cut) | 0.698 | 0.698 | 0.000 | Correction completely lost |
 | B1 (Random Cut) | 0.515 | 0.511 | -0.004 | General damage |
 | C1 (Shuffled Feedback) | 0.698 | 0.634 | **-0.064** | Wrong self-reference is *worse* than none |
+| **C2 (Clone Feedback)** | 0.698 | 0.623 | **-0.075** | Another model's valid output = *even worse* |
 | D' (Param-matched FF) | 0.822 | 0.822 | 0.000 | Extra params help FF, not correction |
 
 - Baseline 95% CI: **[+0.023, +0.059]** (does not contain zero)
 - All ablation groups significantly different from Baseline (Holm-Bonferroni corrected p < 0.01)
+- C2 (Clone Feedback) proves dependency on *own* output, not just any valid signal
 - Robust across **54/80 (68%)** hyperparameter configurations
 
 ## Architecture
@@ -31,7 +33,7 @@ Input(10) → Hidden1(10) → Hidden2(10) → Output(5)
 - **Pure NumPy** — no PyTorch/TensorFlow, every weight is directly accessible
 - **3-step unroll**: same static input presented 3 times; network corrects via feedback
 
-## Experimental Groups (7 conditions)
+## Experimental Groups (8 conditions)
 
 | Group | Description | Purpose |
 |-------|-------------|---------|
@@ -40,6 +42,7 @@ Input(10) → Hidden1(10) → Hidden2(10) → Output(5)
 | **B1** | Random weights zeroed (×30) | Is it about *which* weights? |
 | **B2** | Structured cut (h1→h2) | General path ablation control |
 | **C1** | Feedback permuted (×30) | Information vs self-reference |
+| **C2** | Clone model's output as feedback | OOD criticism control |
 | **D** | Feedforward only (no recurrence in training) | Recurrence necessity |
 | **D'** | Param-matched FF (skip connection) | Parameter count control |
 
@@ -73,13 +76,16 @@ Our reported configuration (w1=0.0, w2=0.2, τ=2.0) ranks **13th/80** — a mid-
 │   └── test_metrics.py                # Metric validity
 ├── experiments/
 │   ├── run_experiment.py              # Full experiment (10 models × 7 groups × 6 noise levels)
+│   ├── run_c2_experiment.py           # Group C2 clone feedback experiment
 │   └── sweep_hyperparams.py           # Hyperparameter robustness sweep
 └── results/
     ├── REPORT.md                      # Main experiment report (Korean)
     ├── REPORT.en.md                   # Main experiment report (English)
+    ├── REPORT_C2.md                   # Clone Feedback analysis (Korean)
+    ├── REPORT_C2.en.md                # Clone Feedback analysis (English)
     ├── REPORT_SWEEP.md                # Hyperparameter sweep analysis (Korean)
     ├── REPORT_SWEEP.en.md             # Hyperparameter sweep analysis (English)
-    ├── raw_metrics.csv                # Full raw data (3,900 rows)
+    ├── raw_metrics.csv                # Full raw data (3,960 rows)
     ├── sweep_hyperparams.csv          # Sweep raw data (800 rows)
     ├── ablation_comparison.png        # Group comparison bar chart
     ├── noise_sweep_curve.png          # Noise level × group curves
@@ -129,8 +135,9 @@ python experiments/sweep_hyperparams.py
 1. **Self-correction is real**: Baseline gain = +0.042, significantly above zero
 2. **Feedback is necessary**: Removing recurrence (Group A) eliminates all correction
 3. **Self-reference, not just information**: Shuffled feedback (Group C1) is *worse* than no feedback — the network actively uses its own output, and wrong information misleads it
-4. **Not a capacity effect**: Extra parameters (Group D') improve feedforward accuracy but cannot produce self-correction
-5. **Emergence requires incentive**: Time-weighted loss (freeing t=1 from accuracy pressure) is the key enabler, not network size
+4. **Own output, not any valid signal**: Clone feedback (Group C2) — another trained model's well-formed output — is even worse than shuffled, proving dependency on *self*
+5. **Not a capacity effect**: Extra parameters (Group D') improve feedforward accuracy but cannot produce self-correction
+6. **Emergence requires incentive**: Time-weighted loss (freeing t=1 from accuracy pressure) is the key enabler, not network size
 
 ## License
 

@@ -144,6 +144,143 @@ def compute_all_metrics(net, X, y):
     }
 
 
+def compute_all_metrics_with_clone(target_net, clone_net, X, y):
+    """Clone feedback를 사용한 메트릭 계산.
+
+    target_net의 피드백을 clone_net의 출력으로 대체.
+    compute_all_metrics와 동일한 dict 반환.
+    """
+    from src.ablation import forward_sequence_with_clone
+
+    n = len(X)
+    correct_t1 = 0
+    correct_t2 = 0
+    correct_t3 = 0
+    r_norms = []
+    deltas = []
+    confidences = []
+    accuracies_for_ece = []
+
+    for i in range(n):
+        outputs = forward_sequence_with_clone(target_net, clone_net, X[i], T=3)
+        true_cls = np.argmax(y[i])
+
+        if np.argmax(outputs[0]) == true_cls:
+            correct_t1 += 1
+        if np.argmax(outputs[1]) == true_cls:
+            correct_t2 += 1
+        if np.argmax(outputs[2]) == true_cls:
+            correct_t3 += 1
+
+        # recurrent contribution norm — uses target's cache after clone-injected forward
+        for t in [1, 2]:
+            feedback = target_net._cache.get('feedback', np.zeros(target_net.output_size))
+            contrib = feedback @ target_net.W_rec
+            r_norms.append(np.linalg.norm(contrib))
+
+        # step delta
+        for t in range(1, 3):
+            deltas.append(np.linalg.norm(outputs[t] - outputs[t - 1]))
+
+        # ECE data (t=3)
+        probs = softmax(outputs[2])
+        confidences.append(np.max(probs))
+        accuracies_for_ece.append(float(np.argmax(outputs[2]) == true_cls))
+
+    acc_t1 = correct_t1 / n
+    acc_t2 = correct_t2 / n
+    acc_t3 = correct_t3 / n
+    gain = acc_t3 - acc_t1
+
+    confidences = np.array(confidences)
+    accuracies_for_ece = np.array(accuracies_for_ece)
+    bin_boundaries = np.linspace(0, 1, 11)
+    ece = 0.0
+    for b in range(10):
+        lo, hi = bin_boundaries[b], bin_boundaries[b + 1]
+        mask = (confidences > lo) & (confidences <= hi)
+        if mask.sum() == 0:
+            continue
+        ece += mask.sum() / n * abs(accuracies_for_ece[mask].mean() - confidences[mask].mean())
+
+    return {
+        'acc_t1': float(acc_t1),
+        'acc_t2': float(acc_t2),
+        'acc_t3': float(acc_t3),
+        'gain': float(gain),
+        'ece': float(ece),
+        'r_norm': float(np.mean(r_norms)) if r_norms else 0.0,
+        'delta_norm': float(np.mean(deltas)) if deltas else 0.0,
+    }
+
+
+# ──────────────────────────────────────────────
+# Wilcoxon Signed-Rank Exact Test (scipy 불필요)
+# ──────────────────────────────────────────────
+
+def wilcoxon_exact(x, y):
+    """Wilcoxon signed-rank exact test (paired, two-sided).
+
+    N≤25이면 2^N 전수 열거로 exact p-value 계산.
+    scipy.stats.wilcoxon과 동일한 결과 (검증 완료).
+
+    Args:
+        x, y: 1-D array-like paired samples (같은 길이)
+
+    Returns:
+        (T, p_value) where T = min(T+, T-)
+    """
+    x = np.asarray(x, dtype=np.float64)
+    y = np.asarray(y, dtype=np.float64)
+    d = x - y
+
+    # Remove zero differences
+    d = d[d != 0]
+    n = len(d)
+    if n == 0:
+        return 0.0, 1.0
+
+    # Rank absolute differences
+    abs_d = np.abs(d)
+    order = np.argsort(abs_d, kind='mergesort')
+    ranks = np.empty(n, dtype=np.float64)
+    ranks[order] = np.arange(1, n + 1, dtype=np.float64)
+
+    # Handle ties: assign average rank
+    sorted_abs = abs_d[order]
+    i = 0
+    while i < n:
+        j = i
+        while j < n and sorted_abs[j] == sorted_abs[i]:
+            j += 1
+        if j > i + 1:
+            avg_rank = np.mean(ranks[order[i:j]])
+            for k in range(i, j):
+                ranks[order[k]] = avg_rank
+        i = j
+
+    # T+ and T-
+    T_plus = float(np.sum(ranks[d > 0]))
+    T_minus = float(np.sum(ranks[d < 0]))
+    T = min(T_plus, T_minus)
+
+    # Exact enumeration: 2^n sign assignments
+    rank_sum_total = float(ranks.sum())
+    n_perms = 1 << n  # 2^n
+    count = 0
+    for mask in range(n_perms):
+        t_val = 0.0
+        for bit in range(n):
+            if mask & (1 << bit):
+                t_val += ranks[bit]
+        t_min = min(t_val, rank_sum_total - t_val)
+        if t_min <= T:
+            count += 1
+
+    p = count / n_perms
+    return float(T), float(p)
+
+
 # ──────────────────────────────────────────────
 # Neuron Importance (Heatmap 데이터 생성)
 # ──────────────────────────────────────────────

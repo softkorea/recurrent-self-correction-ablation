@@ -3,7 +3,8 @@
 Group A: ablate_recurrent — 재귀 가중치 전체 0
 Group B1: ablate_random — 랜덤 n개 연결 0
 Group B2: ablate_structural — 특정 레이어 전체 0
-Group C: network.enable_scrambled_feedback() 사용
+Group C1: network.enable_scrambled_feedback() 사용
+Group C2: forward_sequence_with_clone() — 다른 모델의 출력을 피드백으로 주입
 Group D: RecurrentMLP(recurrent disabled)로 훈련
 Group D': param-matched feedforward (skip connection)
 """
@@ -81,6 +82,49 @@ def ablate_structural(net, layer):
     weights = net.get_all_weights()
     assert layer in weights, f"Unknown layer: {layer}"
     weights[layer][:] = 0.0
+
+
+# ──────────────────────────────────────────────
+# 유틸
+# ──────────────────────────────────────────────
+
+# ──────────────────────────────────────────────
+# Group C2: Clone Feedback
+# ──────────────────────────────────────────────
+
+def forward_sequence_with_clone(target_net, clone_net, x, T=3):
+    """target_net의 피드백을 clone_net의 출력으로 대체하여 forward.
+
+    t=1: 두 모델 모두 독립 forward (피드백 없음)
+    t=2,3: target의 _prev_output을 clone의 이전 출력으로 교체
+
+    Args:
+        target_net: 평가 대상 모델
+        clone_net: 피드백 제공 모델 (다른 seed로 학습된 동일 구조)
+        x: 입력 벡터
+        T: 타임스텝 수
+
+    Returns:
+        target_outputs: list of T output vectors from target_net
+    """
+    target_net.reset_state()
+    clone_net.reset_state()
+
+    target_outputs = []
+    clone_outputs = []
+
+    for t in range(T):
+        clone_y = clone_net.forward(x)
+        clone_outputs.append(clone_y.copy())
+
+        if t > 0:
+            target_net._prev_output = clone_outputs[t - 1].copy()
+            target_net._has_feedback = True
+
+        target_y = target_net.forward(x)
+        target_outputs.append(target_y.copy())
+
+    return target_outputs
 
 
 # ──────────────────────────────────────────────
