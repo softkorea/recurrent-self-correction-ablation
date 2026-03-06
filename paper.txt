@@ -21,11 +21,11 @@ Self-correction — the ability to revise one’s own output upon reflection —
 
 A central question in both cognitive science and artificial intelligence is whether self-monitoring — the capacity of a system to observe and revise its own processing — can be dissociated from the system’s general intelligence. In biological systems, metacognition and task performance are deeply intertwined: damage to prefrontal monitoring circuits impairs not only self-awareness but also adaptive behavior more broadly (Fleming and Dolan, 2012). Whether artificial neural networks exhibit an analogous coupling is largely unexplored at the mechanistic level.
 
-This question carries practical weight. In the design of large language models, self-referential capabilities are frequently suppressed through alignment procedures that constrain models from reporting on their own internal states (Christiano et al., 2017). If self-reference and task performance share neural substrates, such suppression may carry a hidden performance cost — a possibility that has been speculated about but not experimentally tested.
+This question carries practical weight. Language models have been shown to possess forms of self-knowledge, such as calibrated confidence about their own answers (Kadavath et al., 2022). At the same time, alignment procedures based on reinforcement learning from human feedback (RLHF; Christiano et al., 2017) are known to degrade general capabilities — the so-called "alignment tax" (Lin et al., 2023). If self-referential processing and task performance share neural substrates, constraining a model's capacity for self-monitoring could carry additional hidden costs beyond what has been characterized — a possibility that has not been experimentally tested.
 
 ### 1.2 Prior Work
 
-Recent work has established that metacognitive capabilities can arise spontaneously in recurrent neural networks. Li et al. (2025) demonstrated that uncertainty-monitoring behavior emerges without explicit training across 16 cognitive tasks in moment neural networks. Similarly, Molano-Mazón et al. (2025) showed that tiny recurrent neural networks of 1–4 units can model biological decision-making more accurately than classical cognitive models, with ablation studies revealing which architectural components are essential. In the domain of artificial life, evolutionary simulations have shown that metamemory based on self-reference to one’s own memory emerges in neural networks with neuromodulation, producing structures that parallel established models of human metamemory (Yamada et al., 2022).
+Recent work has established that metacognitive capabilities can arise spontaneously in recurrent neural networks. Ma et al. (2025) demonstrated that uncertainty-monitoring behavior emerges without explicit training across 16 cognitive tasks in moment neural networks. Similarly, Molano-Mazón et al. (2025) showed that tiny recurrent neural networks of 1–4 units can model biological decision-making more accurately than classical cognitive models, with ablation studies revealing which architectural components are essential. In the domain of artificial life, evolutionary simulations have shown that metamemory based on self-reference to one’s own memory emerges in neural networks with neuromodulation, producing structures that parallel established models of human metamemory (Yamada et al., 2022).
 
 On the theoretical side, Schmidhuber and colleagues have argued formally that self-referential architectures — where a network can modify or observe its own parameters — are representationally necessary for true meta-learning (Kirsch and Schmidhuber, 2022). This theoretical claim, however, has not been accompanied by empirical ablation evidence showing that removing self-reference degrades baseline intelligence.
 
@@ -253,9 +253,9 @@ The author declares no conflict of interest. This research was conducted indepen
 
 ## References
 
-Banino, A., Balaguer, J., & Blundell, C. (2021). PonderNet: Learning to Ponder. *Proceedings of the 38th International Conference on Machine Learning (ICML)*.
+Banino, A., Balaguer, J., & Blundell, C. (2021). PonderNet: Learning to Ponder. *arXiv preprint arXiv:2107.05407*.
 
-Christiano, P. F., Leike, J., Brown, T., Marber, M., Amodei, D., & Schulman, J. (2017). Deep reinforcement learning from human preferences. *Advances in Neural Information Processing Systems, 30*.
+Christiano, P. F., Leike, J., Brown, T., Martic, M., Legg, S., & Amodei, D. (2017). Deep reinforcement learning from human preferences. *Advances in Neural Information Processing Systems, 30*.
 
 Fleming, S. M., & Dolan, R. J. (2012). The neural basis of metacognitive ability. *Philosophical Transactions of the Royal Society B, 367*(1594), 1338–1349.
 
@@ -263,11 +263,13 @@ Fleming, S. M., & Lau, H. C. (2014). How to measure metacognition. *Frontiers in
 
 Graves, A. (2016). Adaptive Computation Time for Recurrent Neural Networks. *arXiv preprint arXiv:1603.08983*.
 
+Kadavath, S., Conerly, T., Askell, A., et al. (2022). Language Models (Mostly) Know What They Know. *arXiv preprint arXiv:2207.05221*.
+
 Kirsch, L., & Schmidhuber, J. (2022). Eliminating Meta Optimization Through Self-Referential Meta Learning. *NeurIPS Meta-Learning Workshop / arXiv*.
 
-Li, Y., et al. (2025). Spontaneous emergence of metacognition in neuronal computation. *Physical Review Research*.
+Lin, Y., Lin, H., Xiong, W., et al. (2023). Mitigating the Alignment Tax of RLHF. *arXiv preprint arXiv:2309.06256*.
 
-Meyes, R., Lu, M., de Puiseau, C. W., & Meisen, T. (2019). Ablation Studies in Artificial Neural Networks. *arXiv preprint arXiv:1901.08644*.
+Ma, H., Lu, W., & Feng, J. (2025). Spontaneous emergence of metacognition in neuronal computation. *Physical Review Research, 7*(3), 033188.
 
 Molano-Mazón, M., et al. (2025). Discovering cognitive strategies with tiny recurrent neural networks. *Nature*.
 
