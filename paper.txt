@@ -25,7 +25,7 @@ This question carries practical weight. Language models have been shown to posse
 
 ### 1.2 Prior Work
 
-Recent work has established that metacognitive capabilities can arise spontaneously in recurrent neural networks. Ma et al. (2025) demonstrated that uncertainty-monitoring behavior emerges without explicit training across 16 cognitive tasks in moment neural networks. Similarly, Molano-Mazón et al. (2025) showed that tiny recurrent neural networks of 1–4 units can model biological decision-making more accurately than classical cognitive models, with ablation studies revealing which architectural components are essential. In the domain of artificial life, evolutionary simulations have shown that metamemory based on self-reference to one’s own memory emerges in neural networks with neuromodulation, producing structures that parallel established models of human metamemory (Yamada et al., 2022).
+Recent work has established that metacognitive capabilities can arise spontaneously in recurrent neural networks. Ma et al. (2025) demonstrated that uncertainty-monitoring behavior emerges without explicit training across 16 cognitive tasks in moment neural networks. Similarly, Li et al. (2025) showed that tiny recurrent neural networks of 1–4 units can discover cognitive strategies that model biological decision-making more accurately than classical cognitive models, with ablation studies revealing which architectural components are essential. In the domain of artificial life, evolutionary simulations have shown that metamemory based on self-reference to one’s own memory emerges in neural networks with neuromodulation, producing structures that parallel established models of human metamemory (Yamato et al., 2022).
 
 On the theoretical side, Schmidhuber and colleagues have argued formally that self-referential architectures — where a network can modify or observe its own parameters — are representationally necessary for true meta-learning (Kirsch and Schmidhuber, 2022). This theoretical claim, however, has not been accompanied by empirical ablation evidence showing that removing self-reference degrades baseline intelligence.
 
@@ -207,7 +207,7 @@ Second, our model is a toy system. Thirty-five neurons performing static classif
 
 Third, self-correction as operationally defined here (improving accuracy from t=1 to t=3 on the same static input) is a narrow proxy for the richer concept of self-awareness. We do not claim that our network “knows” it is correcting itself, only that it systematically uses its own prior output to improve.
 
-Fourth, one might object that iterating a recurrent network for T=3 steps on static input is equivalent to passing through a weight-shared 3× deeper feedforward network, and that the performance improvement from t=1 to t=3 reflects increased computational depth rather than self-correction. However, Group A directly addresses this: when recurrent weights are zeroed, the network still executes all three timesteps (maintaining computational depth) yet produces identical output at each step (gain = 0.000). The depth is preserved; the self-referential content is removed; the correction vanishes. This confirms that depth alone is insufficient — the content of the feedback, not merely the number of processing steps, drives self-correction.
+Fourth, one might object that iterating a recurrent network for T=3 steps on static input is equivalent to passing through a weight-shared 3× deeper feedforward network, and that the performance improvement from t=1 to t=3 reflects increased computational depth rather than self-correction. Group A speaks to this: when recurrent weights are zeroed, the network produces identical output at every timestep (gain = 0.000), because with static input and no feedback, each step is a redundant re-computation of the same feedforward pass — no new information enters the network. This shows that the correction in the Baseline does not come from repeated computation per se, but from the novel information injected via the feedback pathway at each step. Whether to call this "depth" or "self-correction" is partly terminological, but the key empirical fact is that the feedback content — not the number of processing steps — is necessary and sufficient for the gain.
 
 Fifth, the parameter-matched feedforward model (Group D’) achieved higher absolute accuracy at t=1 (0.822) than the recurrent Baseline at t=3 (0.740). This indicates that for this specific static classification task, distributing parameters across a feedforward architecture is more efficient for single-pass pattern recognition. Our claim is not that recurrent self-correction achieves superior absolute performance, but that it represents a qualitatively different computational strategy — iterative refinement through self-reference — that is architecturally inseparable from the recurrent pathway. In tasks requiring genuine iterative reasoning under capacity constraints, this strategy may prove essential.
 
@@ -267,11 +267,11 @@ Kadavath, S., Conerly, T., Askell, A., et al. (2022). Language Models (Mostly) K
 
 Kirsch, L., & Schmidhuber, J. (2022). Eliminating Meta Optimization Through Self-Referential Meta Learning. *NeurIPS Meta-Learning Workshop / arXiv*.
 
+Li, J.-A., Benna, M. K., & Mattar, M. G. (2025). Discovering cognitive strategies with tiny recurrent neural networks. *Nature, 644*(8078), 993–1001.
+
 Lin, Y., Lin, H., Xiong, W., et al. (2023). Mitigating the Alignment Tax of RLHF. *arXiv preprint arXiv:2309.06256*.
 
 Ma, H., Lu, W., & Feng, J. (2025). Spontaneous emergence of metacognition in neuronal computation. *Physical Review Research, 7*(3), 033188.
-
-Molano-Mazón, M., et al. (2025). Discovering cognitive strategies with tiny recurrent neural networks. *Nature*.
 
 Morales, J., Lau, H., & Fleming, S. M. (2018). Domain-general and domain-specific patterns of activity supporting metacognition in human prefrontal cortex. *Journal of Neuroscience, 38*(14), 3534–3546.
 
@@ -283,4 +283,4 @@ Wei, J., Tay, Y., Bommasani, R., et al. (2022a). Emergent Abilities of Large Lan
 
 Wei, J., Wang, X., Schuurmans, D., et al. (2022b). Chain-of-Thought Prompting Elicits Reasoning in Large Language Models. *Advances in Neural Information Processing Systems, 35*.
 
-Yamada, T., et al. (2022). Evolution of metamemory based on self-reference to own memory in artificial neural network with neuromodulation. *Scientific Reports, 12*, 6834.
+Yamato, Y., Suzuki, R., & Arita, T. (2022). Evolution of metamemory based on self-reference to own memory in artificial neural network with neuromodulation. *Scientific Reports, 12*(1), 6233.
