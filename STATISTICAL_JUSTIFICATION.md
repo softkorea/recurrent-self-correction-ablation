@@ -61,7 +61,7 @@ The four assumptions of the Wilcoxon signed-rank test were checked against actua
 
 ### 2.3 Symmetry of Differences (d)
 
-The Wilcoxon signed-rank test assumes that the distribution of differences is symmetric about zero under H0. However, **using an exact test greatly reduces dependence on this assumption** — the exact p-value directly computes the probability that the observed rank statistic occurs by pure chance.
+The Wilcoxon signed-rank test assumes that the distribution of differences is symmetric about zero under H0. The exact test avoids the additional normality approximation used for large samples, but **the symmetry assumption itself is not eliminated by using exact computation** — it remains a structural assumption of the test. However, for our data the assumption is approximately satisfied (see skewness values below), and when all differences share the same sign (as in C1 and C2), the result is robust to moderate asymmetry.
 
 For reference, we report the skewness of each comparison:
 
@@ -75,9 +75,9 @@ For reference, we report the skewness of each comparison:
 | Baseline vs D' | -0.370 | -0.775 | Near symmetric |
 
 C2's skewness of 1.047 is slightly elevated, driven by seed=2 having a larger difference (0.225) than other models (0.065–0.175). However:
-- The exact test does not depend on the symmetry assumption required by normal approximation.
 - All 10 C2 differences are **positive** (minimum 0.065), so directionality is unambiguous.
-- Under the most conservative interpretation, p = 0.001953 (= 1/512), which is the exact upper bound probability that all 10 differences share the same sign.
+- When all differences share the same sign, the Wilcoxon test is robust to moderate asymmetry because the rank ordering is consistent.
+- Under the most conservative interpretation (sign test), p = 2 × (1/2)^10 = 0.001953, which is the exact probability that all 10 differences share the same sign by chance.
 
 ### 2.4 Ties
 
@@ -126,6 +126,17 @@ Holm-Bonferroni step-down correction applied across 6 comparisons:
 
 All comparisons significant at alpha=0.05. At alpha=0.01, only C1 and C2 are significant.
 
+### 3.2.1 Additional Contrasts: C1 vs A and C2 vs A
+
+To directly test the claim that non-veridical feedback is worse than no feedback, we performed pairwise tests comparing C1 and C2 against A (no feedback):
+
+| Comparison | T+ | T- | T | exact p | 95% Bootstrap CI | Direction |
+|------------|----|----|---|---------|-------------------|-----------|
+| C1 vs A | 1.0 | 54.0 | 1.0 | 0.003906 | [−0.095, −0.036] | C1 < A |
+| C2 vs A | 0.0 | 55.0 | 0.0 | 0.001953 | [−0.095, −0.058] | C2 < A |
+
+Both comparisons confirm that non-veridical feedback actively degrades performance below the no-feedback baseline. These are reported as supplementary contrasts outside the primary Holm-Bonferroni family.
+
 ### 3.3 Verification: Agreement with scipy.stats.wilcoxon
 
 | Comparison | Our implementation (exact) | scipy (exact) | Match |
@@ -157,7 +168,7 @@ At N=10, the normality assumption cannot be trusted. A paired t-test would yield
 
 ### 4.3 Permutation Test
 
-The least assumption-dependent nonparametric test. At N=10, exact testing via 10! = 3,628,800 permutations is feasible. More general than Wilcoxon signed-rank, but Wilcoxon is more widely accepted in the literature, and result differences are negligible.
+The least assumption-dependent nonparametric test for paired data. For N=10 paired observations, the exact sign-flip (paired permutation) test enumerates all 2^10 = 1,024 sign assignments — the same enumeration space as the Wilcoxon signed-rank test. The difference is that the permutation test uses the mean difference as its statistic (ignoring rank information), while Wilcoxon uses signed ranks. For our data, both yield comparable conclusions. Wilcoxon is more widely accepted in the literature and has slightly higher power when the symmetry assumption holds.
 
 ---
 
@@ -180,7 +191,7 @@ For more precise p-values, the sample size (number of independent models) must b
 | P-value computation | Exact enumeration (2^10 = 1,024) — Appropriate |
 | Paired samples assumption | Same-seed model comparison — Satisfied |
 | Continuity assumption | Unique value ratio 9–10/10 — Satisfied |
-| Symmetry assumption | Skewness |<=1.05|, minimized by exact test — Satisfied |
+| Symmetry assumption | Skewness |<=1.05|, approximately satisfied; robust when all diffs share sign — Satisfied |
 | Ties | 0 zero-differences, <=1 tied group of 2 — Satisfied |
 | External library dependency | None (numpy only) — Verified |
 | scipy verification | 6/6 comparisons match exactly — Verified |
