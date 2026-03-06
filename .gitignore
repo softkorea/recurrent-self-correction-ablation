@@ -31,6 +31,7 @@ plan.md
 REVIEW_PACKAGE.md
 REFERENCES_URLS.md
 UNDERSTANDING_GUIDE.md
+TODO.md
 
 # LaTeX build artifacts
 paper/*.aux
