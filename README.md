@@ -64,6 +64,7 @@ Our reported configuration (w1=0.0, w2=0.2, tau=2.0) ranks **13th/80** — a mid
 ## Project Structure
 
 ```
+├── analyze_results.py                    # Verify all reported numbers from raw data
 ├── paper.txt                             # Full manuscript
 ├── CLAUDE.md                             # Experiment constraints & rules
 ├── plan.md                               # Detailed experiment plan
@@ -116,6 +117,14 @@ pip install numpy matplotlib pytest
 ```bash
 pytest tests/ -v
 ```
+
+### Verify Reported Numbers
+
+```bash
+python analyze_results.py
+```
+
+Reads `results/raw_metrics.csv` and reproduces every statistic cited in the paper — group means, bootstrap CIs, Wilcoxon p-values, Holm-Bonferroni corrections, noise sweep, and recurrent contribution norms. No experiments are re-run; this script only performs analysis on existing data.
 
 ### Reproduce All Results
 
