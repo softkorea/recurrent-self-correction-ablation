@@ -43,7 +43,7 @@ First, we demonstrate that self-correction emerges in a 35-neuron recurrent netw
 
 Second, we show through selective ablation that removing the recurrent self-referential loop eliminates self-correction completely (correction gain drops to exactly zero) while preserving baseline pattern recognition (t=1 accuracy unchanged). This provides causal evidence for the inseparability of self-reference and self-correction.
 
-Third, we introduce a novel diagnostic: the “fake mirror” test. By replacing veridical self-feedback with distribution-matched shuffled feedback, we demonstrate that corrupted self-reference is *more* harmful than absent self-reference (gain = −0.064 vs. 0.000). This proves that the network actively depends on the semantic content of its own prior output, not merely on the statistical properties of an auxiliary signal.
+Third, we introduce a novel diagnostic: the “fake mirror” test. By replacing veridical self-feedback with distribution-matched shuffled feedback, we demonstrate that corrupted self-reference is *more* harmful than absent self-reference (gain = −0.064 vs. 0.000). This establishes that the network actively depends on the semantic content of its own prior output, not merely on the statistical properties of an auxiliary signal.
 
 Fourth, we extend the fake mirror test with a “clone feedback” condition: replacing self-feedback with the well-formed output of an identically trained model. This in-distribution feedback degrades performance at least as severely (gain = −0.075), arguing against the interpretation that the fake mirror effect is merely an out-of-distribution artifact. The network depends specifically on its *own* output trajectory — not on any reasonable feedback signal, however well-formed.
 

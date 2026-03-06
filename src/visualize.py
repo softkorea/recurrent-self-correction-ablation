@@ -236,7 +236,7 @@ def plot_noise_sweep(sweep_data, save_path='results/noise_sweep_curve.png'):
         'B1':       ('#3498db', '^', 'B1 (Random Cut)'),
         'B2':       ('#8e44ad', 'v', 'B2 (Structural Cut)'),
         'C1':       ('#9b59b6', 'D', 'C1 (Permutation)'),
-        'C2':       ('#f39c12', 'P', 'C2 (Batch Shuffle)'),
+        'C2':       ('#f39c12', 'P', 'C2 (Clone Feedback)'),
         'D':        ('#95a5a6', 'x', 'D (Feedforward)'),
         "D'":       ('#1abc9c', '+', "D' (Param-matched FF)"),
     }

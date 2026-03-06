@@ -283,7 +283,7 @@ def run_full_experiment():
     print("\nHolm-Bonferroni corrected p-values (Baseline vs each, noise=0.5, N=10):", flush=True)
     baseline_gains = np.array(model_gains.get('Baseline', []))
     p_values = {}
-    for g in ['A', 'B1', 'C1', 'D', "D'"]:
+    for g in ['A', 'B1', 'C1', 'C2', 'D', "D'"]:
         if g in model_gains:
             g_gains = np.array(model_gains[g])
             if len(g_gains) > 1 and len(baseline_gains) > 1:

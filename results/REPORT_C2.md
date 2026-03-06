@@ -90,7 +90,7 @@ clone = model[(i+1) % 10]
 
 ### 4.1 Defeating the OOD Criticism
 
-The "OOD artifact" criticism of C1 is completely defeated by C2:
+The "OOD artifact" criticism of C1 is strongly argued against by C2:
 
 | Criticism | C1 | C2 |
 |-----------|-----|-----|
@@ -99,7 +99,7 @@ The "OOD artifact" criticism of C1 is completely defeated by C2:
 | Feedback magnitude/range is wrong? | Possible | ❌ Product of same architecture+training |
 | Result: gain degraded? | ✅ -0.064 | ✅ -0.075 |
 
-The fact that C2's in-distribution feedback still causes degradation proves that
+The fact that C2's in-distribution feedback still causes degradation strongly suggests that
 **the cause of performance drop is not OOD, but the injection of "not-self" output**.
 
 ### 4.2 Mechanism of Self-Correction

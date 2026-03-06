@@ -20,7 +20,7 @@ Repository: https://github.com/softkorea/recurrent-self-correction-ablation
 
 - Baseline 95% CI: **[+0.023, +0.059]** (does not contain zero)
 - All ablation groups significantly different from Baseline (Holm-Bonferroni corrected p < 0.025)
-- C2 (Clone Feedback) proves dependency on *own* output trajectory, not just any valid signal (C1 vs C2 not statistically distinguishable, Wilcoxon p = 0.695)
+- C2 (Clone Feedback) strongly argues for dependency on *own* output trajectory, not just any valid signal (C1 vs C2 not statistically distinguishable, Wilcoxon p = 0.695)
 - Robust across **54/80 (68%)** hyperparameter configurations
 
 ## Architecture

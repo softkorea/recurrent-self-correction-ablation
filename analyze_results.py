@@ -146,7 +146,7 @@ def main():
     # ── Section 3.2-3.3: Wilcoxon tests ──
     section("Wilcoxon Signed-Rank Tests vs Baseline (noise=0.5)")
 
-    comparisons = ["A", "B1", "B2", "C1", "C2", "D'"]
+    comparisons = ["A", "B1", "C1", "C2", "D", "D'"]
     pvals_primary = []
     for g in comparisons:
         diffs = [model_data["Baseline"][i] - model_data[g][i]
