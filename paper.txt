@@ -71,7 +71,7 @@ Training used full-batch gradient descent with learning rate 0.01 for 500 epochs
 
 Two modifications proved necessary for emergence of self-correction:
 
-**Time-weighted loss.** The loss function was weighted across timesteps as L = w1 · L(t=1) + w2 · L(t=2) + 1.0 · L(t=3). With uniform weighting (w1 = w2 = 1/3), the network optimizes for immediate accuracy at t=1 and has no incentive to develop an iterative correction strategy. Setting w1 = 0.0 grants the network temporal freedom: “your initial guess carries no penalty; only the final answer matters.” This creates evolutionary pressure to use the feedback loop for refinement.
+**Time-weighted loss.** The loss function was weighted across timesteps as L = w1 · L(t=1) + w2 · L(t=2) + 1.0 · L(t=3). With uniform weighting (w1 = w2 = 1/3), the network optimizes for immediate accuracy at t=1 and has no incentive to develop an iterative correction strategy. Setting w1 = 0.0 grants the network temporal freedom: “your initial guess carries no penalty; only the final answer matters.” This creates optimization pressure to use the feedback loop for refinement.
 
 **Temperature scaling.** Without temperature scaling, output logits quickly exceed ±3, saturating the tanh feedback function and driving the gradient of the recurrent weights to near zero. Setting τ = 2.0 prevents saturation and maintains gradient flow through the feedback pathway.
 
