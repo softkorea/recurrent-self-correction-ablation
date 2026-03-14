@@ -6,7 +6,7 @@ We confirmed the **emergence of self-correction** in a 35-neuron RecurrentMLP.
 After applying time-weighted loss and temperature scaling, the Baseline correction gain = **+0.0415 ± 0.0295**
 (95% CI: [+0.023, +0.059], excluding zero). Removing the recurrent loop drops the gain to exactly 0,
 and shuffling the feedback worsens the gain to **-0.064**. Furthermore, injecting **another model's
-well-formed output** as feedback worsens the gain to **-0.075**, proving the network depends on
+well-formed output** as feedback worsens the gain to **-0.075**, strongly arguing that the network depends on
 **its own specific output trajectory**, not just any reasonable feedback signal.
 These results strongly support the hypothesis.
 

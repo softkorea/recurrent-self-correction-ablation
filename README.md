@@ -154,7 +154,7 @@ python experiments/sweep_hyperparams.py
 1. **Self-correction is real**: Baseline gain = +0.042, significantly above zero
 2. **Feedback is necessary**: Removing recurrence (Group A) eliminates all correction
 3. **Self-reference, not just information**: Shuffled feedback (Group C1) is *worse* than no feedback — the network actively uses its own output, and wrong information misleads it
-4. **Own output trajectory matters**: Clone feedback (Group C2) — another trained model's well-formed output — degrades performance at least as severely as shuffled feedback, proving dependency on *self*
+4. **Own output trajectory matters**: Clone feedback (Group C2) — another trained model's well-formed output — degrades performance at least as severely as shuffled feedback, strongly arguing for dependency on *self*
 5. **Not a capacity effect**: Extra parameters (Group D') improve feedforward accuracy but cannot produce self-correction
 6. **Emergence requires incentive**: Time-weighted loss (freeing t=1 from accuracy pressure) and temperature scaling are the key enablers, not network size
 
