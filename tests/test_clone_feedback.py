@@ -1,6 +1,6 @@
 """Phase 3+: Group C2 (Clone Feedback) 테스트.
 
-Clone Feedback: 모델 i의 피드백을 모델 (i+1)%10의 출력으로 대체.
+Clone Feedback: 각 target 모델의 피드백을 독립 훈련된 donor 모델의 출력으로 대체.
 같은 분포, 같은 구조, 다른 "self" — OOD 비판 차단.
 """
 

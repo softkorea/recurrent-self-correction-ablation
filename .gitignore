@@ -24,6 +24,8 @@ emergence-suggestion.txt
 hyperparameter sweep.txt
 generate_source_tree.py
 generate_review_package.py
+build_source_tree.py
+build_review_package.py
 source_tree.md
 CLAUDE.md
 FEEDBACK_paper.md

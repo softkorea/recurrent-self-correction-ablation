@@ -1,10 +1,11 @@
 """Group C2 (Clone Feedback) 실험 실행 (병렬화).
 
 기존 raw_metrics.csv에 C2 행을 추가.
-모델 i의 피드백을 모델 (i+1)%10의 출력으로 대체하여 평가.
+각 target 모델(seed 0-9)에 대해 독립적으로 훈련된 donor 모델(seed 100-109)의
+출력을 피드백으로 대체하여 평가. 완전 독립 1:1 매칭.
 
 병렬화 전략:
-- noise_level 단위로 병렬 (같은 noise에서 10모델 전부 학습 후 clone 평가)
+- noise_level 단위로 병렬 (같은 noise에서 target + donor 모두 학습 후 clone 평가)
 - n_workers = cpu_count() - 4 (다른 작업에 지장 없도록)
 """
 
@@ -45,16 +46,22 @@ T = 3
 # 워커 함수 (noise_level 단위 독립 처리)
 # ──────────────────────────────────────────────
 
+DONOR_SEED_OFFSET = 100  # donor seeds: 100-109 (독립)
+
+
 def run_c2_for_noise(noise_level):
-    """한 noise_level에서 10모델 학습 + C2 clone feedback 평가.
+    """한 noise_level에서 target 10모델 + donor 10모델 학습 후 C2 평가.
+
+    Target 모델(seed 0-9)과 독립 donor 모델(seed 100-109)을 1:1 매칭.
+    통계적 독립성 완전 확보.
 
     Returns:
         list of row dicts
     """
     rows = []
 
-    # 10개 모델 학습
-    models = []
+    # 10개 target 모델 학습
+    targets = []
     test_data = []
     for seed in range(N_MODELS):
         net = RecurrentMLP(input_size=10, hidden1=10, hidden2=10,
@@ -62,21 +69,32 @@ def run_c2_for_noise(noise_level):
         X_train, y_train = generate_data(N_TRAIN, noise_level, seed=seed)
         X_test, y_test = generate_data(N_TEST, noise_level, seed=seed + 500)
         train(net, X_train, y_train, epochs=TRAIN_EPOCHS, lr=TRAIN_LR, T=T)
-        models.append(net)
+        targets.append(net)
         test_data.append((X_test, y_test))
 
-    # C2: Clone feedback — model[i]의 피드백을 model[(i+1)%10]으로
+    # 10개 독립 donor 모델 학습 (seed 100-109)
+    # 같은 분포(동일 noise_level)에서 독립 생성된 데이터로 훈련
+    donors = []
     for seed in range(N_MODELS):
-        target = models[seed]
-        clone = models[(seed + 1) % N_MODELS]
+        donor_seed = seed + DONOR_SEED_OFFSET
+        net = RecurrentMLP(input_size=10, hidden1=10, hidden2=10,
+                           output_size=5, seed=donor_seed)
+        X_train, y_train = generate_data(N_TRAIN, noise_level, seed=donor_seed)
+        train(net, X_train, y_train, epochs=TRAIN_EPOCHS, lr=TRAIN_LR, T=T)
+        donors.append(net)
+
+    # C2: Clone feedback — target[i]의 피드백을 donor[i]로 (독립 1:1 매칭)
+    for seed in range(N_MODELS):
+        target = targets[seed]
+        donor = donors[seed]
         X_test, y_test = test_data[seed]
 
-        metrics = compute_all_metrics_with_clone(target, clone, X_test, y_test)
+        metrics = compute_all_metrics_with_clone(target, donor, X_test, y_test)
 
         row = {
             'seed_model': seed,
             'group': 'C2',
-            'seed_ablation': (seed + 1) % N_MODELS,
+            'seed_ablation': seed + DONOR_SEED_OFFSET,
             'noise_level': noise_level,
             **{k: metrics[k] for k in ['acc_t1', 'acc_t2', 'acc_t3',
                                          'gain', 'ece', 'r_norm', 'delta_norm']}
@@ -124,10 +142,13 @@ def run_c2_experiment():
                   'acc_t1', 'acc_t2', 'acc_t3', 'gain', 'ece', 'r_norm', 'delta_norm']
 
     existing_rows = []
-    with open(csv_path, 'r', newline='') as f:
-        reader = csv.DictReader(f)
-        for r in reader:
-            existing_rows.append(r)
+    if os.path.exists(csv_path):
+        with open(csv_path, 'r', newline='') as f:
+            reader = csv.DictReader(f)
+            for r in reader:
+                existing_rows.append(r)
+    else:
+        print(f"[C2] Warning: {csv_path} not found. Creating new file.", flush=True)
 
     # 기존 C2 행 제거 (재실행 시 중복 방지)
     existing_rows = [r for r in existing_rows if r['group'] != 'C2']

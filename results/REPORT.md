@@ -5,8 +5,8 @@
 We confirmed the **emergence of self-correction** in a 35-neuron RecurrentMLP.
 After applying time-weighted loss and temperature scaling, the Baseline correction gain = **+0.0415 ± 0.0295**
 (95% CI: [+0.023, +0.059], excluding zero). Removing the recurrent loop drops the gain to exactly 0,
-and shuffling the feedback worsens the gain to **-0.064**. Furthermore, injecting **another model's
-well-formed output** as feedback worsens the gain to **-0.075**, strongly arguing that the network depends on
+and shuffling the feedback worsens the gain to **-0.064**. Furthermore, injecting **an independently trained
+model's well-formed output** as feedback worsens the gain to **-0.059**, strongly arguing that the network depends on
 **its own specific output trajectory**, not just any reasonable feedback signal.
 These results strongly support the hypothesis.
 
@@ -34,7 +34,7 @@ These results strongly support the hypothesis.
 | B1 (Random Cut) | 0.515±0.048 | 0.511±0.037 | -0.004±0.016 | Correction lost + performance degraded |
 | B2 (Structural Cut) | 0.199±0.032 | 0.199±0.032 | 0.000±0.000 | Function destroyed |
 | C1 (Shuffled Feedback) | 0.698±0.054 | 0.634±0.041 | **-0.064±0.048** | Wrong feedback = degradation |
-| **C2 (Clone Feedback)** | 0.698±0.054 | 0.623±0.043 | **-0.075±0.030** | Other model's valid output = degradation |
+| **C2 (Clone Feedback)** | 0.698±0.054 | 0.639±0.081 | **-0.059±0.069** | Other model's valid output = degradation |
 | D (Feedforward) | 0.746±0.067 | 0.746±0.067 | 0.000±0.000 | No correction possible (no recurrence) |
 | D' (Param-matched FF) | 0.822±0.031 | 0.822±0.031 | 0.000±0.000 | Not a capacity effect |
 
@@ -46,7 +46,7 @@ These results strongly support the hypothesis.
 | A | [0.000, 0.000] |
 | B1 | [-0.013, +0.006] |
 | C1 | [-0.095, -0.036] |
-| C2 | [-0.095, -0.058] |
+| C2 | [-0.101, -0.015] |
 
 ### Holm-Bonferroni Corrected p-values (Wilcoxon signed-rank exact, Baseline vs. each group)
 
@@ -80,8 +80,8 @@ These results strongly support the hypothesis.
 
 **C2 (Clone Feedback) defeats the OOD criticism:**
 
-- C2: injects **well-formed output** from a differently-seeded but identically-structured trained model
-- gain = -0.075 → degradation **at least as severe** as C1 (-0.064); direct C1 vs C2 comparison is not statistically significant (Wilcoxon p = 0.695)
+- C2: injects **well-formed output** from an independently trained donor model (seed 100-109)
+- gain = -0.059 → degradation **comparable** to C1 (-0.064); direct C1 vs C2 comparison is not statistically significant (Wilcoxon p = 0.846)
 - Defeats the criticism that C1's degradation is merely an OOD (out-of-distribution) artifact
 - The clone's output is a product of the same distribution, architecture, and training procedure — but since it is not "self," it cannot be used for correction
 - **Conclusion: self-correction depends on the model's own output trajectory, not just any reasonable feedback signal.** See `REPORT_C2.md` for full analysis.

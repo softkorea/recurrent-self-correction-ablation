@@ -2,7 +2,7 @@
 
 **Can a neural network correct its own mistakes using output feedback — and does removing that feedback destroy self-correction?**
 
-This experiment demonstrates that a minimal recurrent neural network (35 neurons) learns to iteratively correct its predictions through an output-to-hidden feedback loop. Systematically ablating or corrupting this loop eliminates self-correction, providing evidence that recurrent self-reference is a necessary mechanism — not a byproduct of extra parameters.
+This experiment demonstrates that a minimal recurrent neural network (35 neurons) learns to iteratively correct its predictions through an output-to-hidden feedback loop. Systematically ablating or corrupting this loop eliminates self-correction, providing evidence that recurrent self-reference appears to be a critical factor for self-correction — not a byproduct of extra parameters.
 
 Paper: [`paper.txt`](paper.txt)
 Repository: https://github.com/softkorea/recurrent-self-correction-ablation
@@ -15,12 +15,12 @@ Repository: https://github.com/softkorea/recurrent-self-correction-ablation
 | A (Recurrent Cut) | 0.698 | 0.698 | 0.000 | Correction completely lost |
 | B1 (Random Cut) | 0.515 | 0.511 | -0.004 | General damage |
 | C1 (Shuffled Feedback) | 0.698 | 0.634 | **-0.064** | Wrong self-reference is *worse* than none |
-| **C2 (Clone Feedback)** | 0.698 | 0.623 | **-0.075** | Another model's valid output = degradation |
+| **C2 (Clone Feedback)** | 0.698 | 0.639 | **-0.059** | Another model's valid output = degradation |
 | D' (Param-matched FF) | 0.822 | 0.822 | 0.000 | Extra params help FF, not correction |
 
 - Baseline 95% CI: **[+0.023, +0.059]** (does not contain zero)
-- All ablation groups significantly different from Baseline (Holm-Bonferroni corrected p < 0.025)
-- C2 (Clone Feedback) strongly argues for dependency on *own* output trajectory, not just any valid signal (C1 vs C2 not statistically distinguishable, Wilcoxon p = 0.695)
+- All six prespecified primary comparisons significantly different from Baseline (Holm-Bonferroni corrected p < 0.025)
+- C2 (Clone Feedback) strongly argues for dependency on *own* output trajectory, not just any valid signal (C1 vs C2 not statistically distinguishable, Wilcoxon p = 0.846)
 - Robust across **54/80 (68%)** hyperparameter configurations
 
 ## Architecture
@@ -45,7 +45,7 @@ Input(10) → Hidden1(10) → Hidden2(10) → Output(5)
 | **B1** | Random weights zeroed (x30) | Is it about *which* weights? |
 | **B2** | Structured cut (h2→output, 50 params) | General path ablation control |
 | **C1** | Feedback permuted (x30) | Information vs self-reference |
-| **C2** | Clone model's output as feedback | OOD criticism control |
+| **C2** | Independent donor model's output as feedback | OOD criticism control |
 | **D** | Feedforward only (no recurrence in training) | Recurrence necessity |
 | **D'** | Param-matched FF (skip connection) | Parameter count control |
 
@@ -86,6 +86,7 @@ Our reported configuration (w1=0.0, w2=0.2, tau=2.0) ranks **13th/80** — a mid
 ├── experiments/
 │   ├── run_experiment.py                 # Full experiment (10 models x 8 groups x 6 noise levels)
 │   ├── run_c2_experiment.py              # Group C2 clone feedback experiment
+│   ├── run_c2_datamatched.py             # C2 data-matched variant (robustness check)
 │   └── sweep_hyperparams.py              # Hyperparameter robustness sweep
 ├── results/
 │   ├── REPORT.md                         # Main experiment report

@@ -13,11 +13,13 @@ import math
 import os
 import random
 
+import numpy as np
+
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 CSV_PATH = os.path.join(PROJECT_ROOT, "results", "raw_metrics.csv")
 NOISE_PRIMARY = 0.5
 BOOTSTRAP_N = 10_000
-BOOTSTRAP_SEED = 42
+BOOTSTRAP_SEED = 999  # match main experiment scripts
 
 
 def load_csv():
@@ -44,12 +46,12 @@ def mean_sd(values):
 
 
 def bootstrap_ci(values, n_boot=BOOTSTRAP_N, seed=BOOTSTRAP_SEED, alpha=0.05):
-    rng = random.Random(seed)
+    rng = np.random.RandomState(seed)
     n = len(values)
     means = []
     for _ in range(n_boot):
-        sample = [values[rng.randint(0, n - 1)] for _ in range(n)]
-        means.append(sum(sample) / n)
+        sample = rng.choice(values, size=n, replace=True)
+        means.append(float(np.mean(sample)))
     means.sort()
     lo = means[int(n_boot * alpha / 2)]
     hi = means[int(n_boot * (1 - alpha / 2))]
@@ -64,8 +66,19 @@ def wilcoxon_exact_twosided(diffs):
     if n == 0:
         return 1.0, 0
 
-    # Assign ranks (no ties expected with continuous data)
+    # Assign ranks with midrank averaging for ties
+    abs_vals = [v for v, _ in abs_diffs]
     ranks = list(range(1, n + 1))
+    i = 0
+    while i < n:
+        j = i + 1
+        while j < n and abs_vals[j] == abs_vals[i]:
+            j += 1
+        if j > i + 1:
+            avg_rank = sum(ranks[i:j]) / (j - i)
+            for k in range(i, j):
+                ranks[k] = avg_rank
+        i = j
     signs = [s for _, s in abs_diffs]
 
     t_plus = sum(r for r, s in zip(ranks, signs) if s > 0)

@@ -124,7 +124,7 @@ Holm-Bonferroni step-down correction applied across 6 comparisons:
 | 5 | Baseline vs D | 0.007812 | 0.02344 | * |
 | 6 | Baseline vs D' | 0.007812 | 0.02344 | * |
 
-All comparisons significant at alpha=0.05. At alpha=0.01, only C1 and C2 are significant.
+All comparisons significant at alpha=0.05. Due to the resolution limit of the exact test at N=10 (minimum achievable adjusted p-value = 0.0117 after Holm-Bonferroni correction with 6 comparisons), no comparisons reach statistical significance at the alpha=0.01 threshold.
 
 ### 3.2.1 Additional Contrasts: C1 vs A and C2 vs A
 
@@ -133,7 +133,7 @@ To directly test the claim that non-veridical feedback is worse than no feedback
 | Comparison | T+ | T- | T | exact p | 95% Bootstrap CI | Direction |
 |------------|----|----|---|---------|-------------------|-----------|
 | C1 vs A | 1.0 | 54.0 | 1.0 | 0.003906 | [−0.095, −0.036] | C1 < A |
-| C2 vs A | 0.0 | 55.0 | 0.0 | 0.001953 | [−0.095, −0.058] | C2 < A |
+| C2 vs A | 49.0 | 6.0 | 6.0 | 0.027344 | [−0.101, −0.015] | C2 < A |
 
 Both comparisons confirm that non-veridical feedback actively degrades performance below the no-feedback baseline. These are reported as supplementary contrasts outside the primary Holm-Bonferroni family.
 
@@ -177,7 +177,7 @@ The least assumption-dependent nonparametric test for paired data. For N=10 pair
 The minimum possible p-value for the N=10 Wilcoxon signed-rank exact test is:
 
 - T=0 (all differences share the same sign): p = 2/2^10 = **0.001953**
-- This value can remain significant after alpha=0.01 correction, but values below 0.001 are unachievable
+- After Holm-Bonferroni correction with 6 comparisons, the minimum achievable adjusted p-value is 0.001953 × 6 = **0.01172**, which does not reach the alpha=0.01 threshold. Values below 0.001 are unachievable
 
 For more precise p-values, the sample size (number of independent models) must be increased. That C1 and C2 both have raw p = 0.001953 reflects the fact that **both conditions show lower gain than Baseline in all 10/10 models** — a ceiling effect of the test, not an indication that effect sizes are identical.
 
