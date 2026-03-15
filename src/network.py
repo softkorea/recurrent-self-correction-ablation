@@ -194,3 +194,89 @@ class RecurrentMLP:
     def count_params(self):
         """총 파라미터 수."""
         return sum(p.size for p in self.get_all_params())
+
+
+class DeepFeedforwardMLP:
+    """Compute-matched feedforward control (Group D'').
+
+    6 hidden layers of 10 neurons each, matching the recurrent model's
+    3-timestep x 2-hidden-layer = 6 layer traversals.
+
+    Architecture: Input(10) -> H1(10) -> H2(10) -> H3(10) -> H4(10) -> H5(10) -> H6(10) -> Output(5)
+
+    Activations: ReLU (hidden), Linear (output).
+    Initialization: He (sqrt(2/fan_in)).
+    """
+
+    def __init__(self, input_size=10, hidden_size=10, n_hidden=6,
+                 output_size=5, seed=0):
+        self.input_size = input_size
+        self.hidden_size = hidden_size
+        self.n_hidden = n_hidden
+        self.output_size = output_size
+
+        rng = np.random.RandomState(seed)
+
+        # Hidden layers: list of (W, b) pairs
+        self.hidden_layers = []
+        for i in range(n_hidden):
+            fan_in = input_size if i == 0 else hidden_size
+            W = rng.randn(fan_in, hidden_size) * np.sqrt(2.0 / fan_in)
+            b = np.zeros(hidden_size)
+            self.hidden_layers.append((W, b))
+
+        # Output layer
+        self.W_out = rng.randn(hidden_size, output_size) * np.sqrt(2.0 / hidden_size)
+        self.b_out = np.zeros(output_size)
+
+        # Forward cache (for backprop)
+        self._cache = {}
+
+    def forward(self, x):
+        """Sequential forward pass through all layers.
+
+        Args:
+            x: input vector (input_size,)
+
+        Returns:
+            output vector (output_size,)
+        """
+        x = np.asarray(x, dtype=np.float64)
+
+        # Cache for backprop
+        z_list = []  # pre-activation
+        a_list = [x]  # post-activation (a_list[0] = input)
+
+        a = x
+        for W, b in self.hidden_layers:
+            z = a @ W + b
+            a = np.maximum(0, z)  # ReLU
+            z_list.append(z)
+            a_list.append(a)
+
+        # Output (linear)
+        z_out = a @ self.W_out + self.b_out
+        output = z_out
+
+        self._cache = {
+            'z_list': z_list,
+            'a_list': a_list,
+            'z_out': z_out,
+            'output': output,
+        }
+
+        return output
+
+    def get_all_params(self):
+        """Return flat list of all parameter arrays (for gradient check etc.)."""
+        params = []
+        for W, b in self.hidden_layers:
+            params.append(W)
+            params.append(b)
+        params.append(self.W_out)
+        params.append(self.b_out)
+        return params
+
+    def count_params(self):
+        """Total parameter count."""
+        return sum(p.size for p in self.get_all_params())

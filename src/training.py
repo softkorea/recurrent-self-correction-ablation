@@ -300,3 +300,156 @@ def evaluate_accuracy_at_timestep(net, X, y, t):
         if pred == true:
             correct += 1
     return correct / len(X)
+
+
+# ──────────────────────────────────────────────
+# DeepFeedforwardMLP (Group D'') — 학습 지원
+# ──────────────────────────────────────────────
+
+def compute_loss_and_gradients_deep_ff(net, x, target):
+    """Single-sample loss + gradients for DeepFeedforwardMLP.
+
+    Standard backprop through 6 hidden layers. No BPTT, no time weighting.
+    Cross-entropy loss with softmax.
+
+    Args:
+        net: DeepFeedforwardMLP instance
+        x: input vector (input_size,)
+        target: one-hot target vector (output_size,)
+
+    Returns:
+        (loss, grad_list) where grad_list is a list of gradient arrays
+        in the same order as net.get_all_params():
+        [dW_h1, db_h1, dW_h2, db_h2, ..., dW_h6, db_h6, dW_out, db_out]
+    """
+    output = net.forward(x)
+    loss = cross_entropy_loss(output, target)
+    cache = net._cache
+
+    # ── Backward pass ──
+
+    # Output layer gradient: dL/dz_out = softmax(output) - target
+    d_out = d_cross_entropy(output, target)
+
+    # Output layer parameter gradients
+    a_last = cache['a_list'][-1]  # last hidden activation
+    dW_out = np.outer(a_last, d_out)
+    db_out = d_out.copy()
+
+    # Propagate to last hidden layer
+    d_a = net.W_out @ d_out
+
+    # Hidden layers (reverse order)
+    grad_list_hidden = []
+    for i in reversed(range(net.n_hidden)):
+        z = cache['z_list'][i]
+        a_prev = cache['a_list'][i]  # activation feeding into this layer
+
+        # ReLU derivative
+        d_z = d_a * (z > 0).astype(np.float64)
+
+        W, b = net.hidden_layers[i]
+        dW = np.outer(a_prev, d_z)
+        db = d_z.copy()
+        grad_list_hidden.append((dW, db))
+
+        # Propagate to previous layer
+        d_a = W @ d_z
+
+    # Reverse to get correct order (layer 0 first)
+    grad_list_hidden.reverse()
+
+    # Assemble into flat list matching get_all_params() order
+    grad_list = []
+    for dW, db in grad_list_hidden:
+        grad_list.append(dW)
+        grad_list.append(db)
+    grad_list.append(dW_out)
+    grad_list.append(db_out)
+
+    return loss, grad_list
+
+
+def compute_batch_loss_and_gradients_deep_ff(net, X, Y):
+    """Batch average loss + gradients for DeepFeedforwardMLP.
+
+    Args:
+        net: DeepFeedforwardMLP instance
+        X: (n_samples, input_size)
+        Y: (n_samples, output_size) one-hot
+
+    Returns:
+        (mean_loss, mean_grad_list)
+    """
+    n = len(X)
+    total_loss = 0.0
+    batch_grads = None
+
+    for i in range(n):
+        loss, grads = compute_loss_and_gradients_deep_ff(net, X[i], Y[i])
+        total_loss += loss
+        if batch_grads is None:
+            batch_grads = [g.copy() for g in grads]
+        else:
+            for j in range(len(grads)):
+                batch_grads[j] += grads[j]
+
+    total_loss /= n
+    for j in range(len(batch_grads)):
+        batch_grads[j] /= n
+
+    return total_loss, batch_grads
+
+
+def train_deep_ff(net, X, y, epochs=500, lr=0.01, verbose=False):
+    """Training loop for DeepFeedforwardMLP.
+
+    Full-batch SGD.
+
+    Args:
+        net: DeepFeedforwardMLP instance
+        X: training inputs
+        y: training targets (one-hot)
+        epochs: number of training epochs
+        lr: learning rate
+        verbose: print loss every 50 epochs
+
+    Returns:
+        loss_history: list of per-epoch losses
+    """
+    loss_history = []
+
+    for epoch in range(epochs):
+        loss, grads = compute_batch_loss_and_gradients_deep_ff(net, X, y)
+        loss_history.append(loss)
+
+        # SGD update
+        params = net.get_all_params()
+        for p, g in zip(params, grads):
+            p -= lr * g
+
+        if verbose and epoch % 50 == 0:
+            print(f"  Epoch {epoch:4d}: loss = {loss:.4f}")
+
+    return loss_history
+
+
+def evaluate_accuracy_deep_ff(net, X, y):
+    """Single-pass classification accuracy for DeepFeedforwardMLP.
+
+    Args:
+        net: DeepFeedforwardMLP instance
+        X: (n_samples, input_size)
+        y: (n_samples, output_size) one-hot
+
+    Returns:
+        accuracy (float)
+    """
+    correct = 0
+    for i in range(len(X)):
+        output = net.forward(X[i])
+        pred = np.argmax(output)
+        true = np.argmax(y[i])
+        if pred == true:
+            correct += 1
+    return correct / len(X)

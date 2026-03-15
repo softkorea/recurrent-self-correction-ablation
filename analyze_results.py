@@ -39,10 +39,8 @@ def model_means(rows, group, noise, metric="gain"):
 
 
 def mean_sd(values):
-    n = len(values)
-    m = sum(values) / n
-    sd = math.sqrt(sum((x - m) ** 2 for x in values) / (n - 1)) if n > 1 else 0.0
-    return m, sd
+    arr = np.array(values)
+    return float(np.mean(arr)), float(np.std(arr))
 
 
 def bootstrap_ci(values, n_boot=BOOTSTRAP_N, seed=BOOTSTRAP_SEED, alpha=0.05):
@@ -216,6 +214,9 @@ def main():
 
     print("\n" + "=" * 70)
     print("  All numbers above should match those reported in paper.txt")
+    print("  Note: values at exact rounding boundaries (e.g. 0.7395, 0.0295)")
+    print("  may show ±1 in the last decimal digit vs. paper due to")
+    print("  floating-point representation differences in CSV parsing.")
     print("=" * 70)
 
 

@@ -20,7 +20,7 @@ Repository: https://github.com/softkorea/recurrent-self-correction-ablation
 
 - Baseline 95% CI: **[+0.023, +0.059]** (does not contain zero)
 - All six prespecified primary comparisons significantly different from Baseline (Holm-Bonferroni corrected p < 0.025)
-- C2 (Clone Feedback) strongly argues for dependency on *own* output trajectory, not just any valid signal (C1 vs C2 not statistically distinguishable, Wilcoxon p = 0.846)
+- C2 (Clone Feedback) rules out marginal-distribution mismatch and demonstrates learned feedback-contract specificity (C1 vs C2 not statistically distinguishable, Wilcoxon p = 0.846)
 - Robust across **54/80 (68%)** hyperparameter configurations
 
 ## Architecture
@@ -45,9 +45,10 @@ Input(10) → Hidden1(10) → Hidden2(10) → Output(5)
 | **B1** | Random weights zeroed (x30) | Is it about *which* weights? |
 | **B2** | Structured cut (h2→output, 50 params) | General path ablation control |
 | **C1** | Feedback permuted (x30) | Information vs self-reference |
-| **C2** | Independent donor model's output as feedback | OOD criticism control |
+| **C2** | Independent donor model's output as feedback | Marginal-distribution mismatch control |
 | **D** | Feedforward only (no recurrence in training) | Recurrence necessity |
 | **D'** | Param-matched FF (skip connection) | Parameter count control |
+| **D''** | 6-layer deep FF (compute-matched) | Computational depth control |
 
 ## Robustness (Hyperparameter Sweep)
 
@@ -56,10 +57,10 @@ Swept 80 configurations (w1 x w2 x tau) x 10 models = 800 experiments:
 | Parameter | Emergence Range | Failure Region |
 |-----------|----------------|----------------|
 | w1 (t=1 loss weight) | <= 0.2 (75-95%) | 0.3 (10%) |
-| tau (temperature) | 1.0-3.0 (69-88%) | 5.0 (25%) |
-| w2 (t=2 loss weight) | All values (60-75%) | — |
+| tau (temperature) | 1.0-3.0 (69-81%) | 5.0 (44%) |
+| w2 (t=2 loss weight) | All values (55-75%) | — |
 
-Our reported configuration (w1=0.0, w2=0.2, tau=2.0) ranks **13th/80** — a mid-range setting, not a cherry-picked optimum.
+Our reported configuration (w1=0.0, w2=0.2, tau=2.0) ranks **8th/80** — not the optimum, though in the upper portion of the explored grid.
 
 ## Project Structure
 
@@ -155,8 +156,8 @@ python experiments/sweep_hyperparams.py
 1. **Self-correction is real**: Baseline gain = +0.042, significantly above zero
 2. **Feedback is necessary**: Removing recurrence (Group A) eliminates all correction
 3. **Self-reference, not just information**: Shuffled feedback (Group C1) is *worse* than no feedback — the network actively uses its own output, and wrong information misleads it
-4. **Own output trajectory matters**: Clone feedback (Group C2) — another trained model's well-formed output — degrades performance at least as severely as shuffled feedback, strongly arguing for dependency on *self*
-5. **Not a capacity effect**: Extra parameters (Group D') improve feedforward accuracy but cannot produce self-correction
+4. **Learned feedback-contract specificity**: Clone feedback (Group C2) — another trained model's well-formed output — degrades performance at least as severely as shuffled feedback, ruling out marginal-distribution mismatch and demonstrating trajectory-level specificity
+5. **Not a capacity or depth effect**: Extra parameters (Group D') and computational depth (Group D'') improve feedforward accuracy but cannot produce self-correction
 6. **Emergence requires incentive**: Time-weighted loss (freeing t=1 from accuracy pressure) and temperature scaling are the key enablers, not network size
 
 ## License

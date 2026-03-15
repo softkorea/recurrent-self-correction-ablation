@@ -78,13 +78,13 @@ These results strongly support the hypothesis.
 - Incorrect self-reference is **worse** than having none at all (A: 0.000)
 - The network actively uses feedback, but when incorrect information is fed back, it is pulled toward wrong answers
 
-**C2 (Clone Feedback) defeats the OOD criticism:**
+**C2 (Clone Feedback) rules out marginal-distribution mismatch:**
 
 - C2: injects **well-formed output** from an independently trained donor model (seed 100-109)
 - gain = -0.059 → degradation **comparable** to C1 (-0.064); direct C1 vs C2 comparison is not statistically significant (Wilcoxon p = 0.846)
-- Defeats the criticism that C1's degradation is merely an OOD (out-of-distribution) artifact
-- The clone's output is a product of the same distribution, architecture, and training procedure — but since it is not "self," it cannot be used for correction
-- **Conclusion: self-correction depends on the model's own output trajectory, not just any reasonable feedback signal.** See `REPORT_C2.md` for full analysis.
+- Rules out marginal-distribution mismatch as the sole explanation for C1's degradation
+- Demonstrates **learned feedback-contract specificity**: the recurrent weights are co-adapted to the specific model's output geometry
+- **Conclusion: self-correction depends on trajectory-level alignment between W_rec and the model's own output, not just on receiving valid feedback signals.** See `REPORT_C2.md` for full analysis.
 
 ### 3.3 "Ruling out parameter count effects" (Group D')
 
@@ -154,14 +154,13 @@ Note: H2 neurons use full knockout (no direct W_rec input), so their correction 
 | Parameter | Emergence Range | Failure Region |
 |-----------|----------------|----------------|
 | w1 (t=1 weight) | ≤ 0.2 (75–95%) | 0.3 (10%) |
-| τ (temperature) | 1.0–3.0 (69–88%) | 5.0 (25%) |
-| w2 (t=2 weight) | Full range (60–75%) | — |
+| τ (temperature) | 1.0–3.0 (69–81%) | 5.0 (44%) |
+| w2 (t=2 weight) | Full range (55–75%) | — |
 
-Our experimental setting (w1=0, w2=0.2, τ=2.0) ranks 13th/80 — a mid-range value, not cherry-picked.
+Our experimental setting (w1=0, w2=0.2, τ=2.0) ranks 13th/80 — not the optimum, though in the upper portion of the explored grid.
 
 ## 8. Limitations and Future Work
 
 1. **Artificiality of time-weighted loss**: w=[0.0, 0.2, 1.0] is a structure that "induces" self-correction. Distinction from naturally emergent phenomena is needed
-2. ~~**Group C2 not implemented**~~ → ✅ **Completed** (Clone Feedback, see `REPORT_C2.md`)
-3. **Timestep-specific neuron masking**: Current importance is based on full-timestep ablation. Masking only at t=2,3 would yield more precise correction contribution measurements
-4. **Validation at larger scales**: Confirmed at 35 neurons, but verification is needed to determine whether the same patterns hold at larger scales
+2. **Timestep-specific neuron masking**: Current importance is based on full-timestep ablation. Masking only at t=2,3 would yield more precise correction contribution measurements
+3. **Validation at larger scales**: Confirmed at 35 neurons, but verification is needed to determine whether the same patterns hold at larger scales

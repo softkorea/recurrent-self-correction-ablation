@@ -214,6 +214,169 @@ def compute_all_metrics_with_clone(target_net, clone_net, X, y):
     }
 
 
+def compute_all_metrics_with_aligned_clone(target_net, donor_net, X, y, align_fn):
+    """Aligned clone feedback를 사용한 메트릭 계산.
+
+    target_net의 피드백을 align_fn으로 정렬된 donor_net의 출력으로 대체.
+    compute_all_metrics와 동일한 dict 반환.
+
+    Args:
+        target_net: 평가 대상 모델
+        donor_net: 피드백 제공 모델
+        X: 테스트 입력 (n_samples, input_size)
+        y: 테스트 레이블 (n_samples, n_classes) one-hot
+        align_fn: alignment function (align_norm or align_affine)
+
+    Returns:
+        dict with keys: acc_t1, acc_t2, acc_t3, gain, ece, r_norm, delta_norm
+    """
+    from src.ablation import forward_sequence_with_aligned_clone
+
+    n = len(X)
+    correct_t1 = 0
+    correct_t2 = 0
+    correct_t3 = 0
+    r_norms = []
+    deltas = []
+    confidences = []
+    accuracies_for_ece = []
+
+    for i in range(n):
+        outputs, caches = forward_sequence_with_aligned_clone(
+            target_net, donor_net, X[i], align_fn, T=3
+        )
+        true_cls = np.argmax(y[i])
+
+        if np.argmax(outputs[0]) == true_cls:
+            correct_t1 += 1
+        if np.argmax(outputs[1]) == true_cls:
+            correct_t2 += 1
+        if np.argmax(outputs[2]) == true_cls:
+            correct_t3 += 1
+
+        # recurrent contribution norm (t=2, t=3)
+        for t in [1, 2]:
+            feedback = caches[t]['feedback']
+            contrib = feedback @ target_net.W_rec
+            r_norms.append(np.linalg.norm(contrib))
+
+        # step delta
+        for t in range(1, 3):
+            deltas.append(np.linalg.norm(outputs[t] - outputs[t - 1]))
+
+        # ECE data (t=3)
+        probs = softmax(outputs[2])
+        confidences.append(np.max(probs))
+        accuracies_for_ece.append(float(np.argmax(outputs[2]) == true_cls))
+
+    acc_t1 = correct_t1 / n
+    acc_t2 = correct_t2 / n
+    acc_t3 = correct_t3 / n
+    gain = acc_t3 - acc_t1
+
+    confidences = np.array(confidences)
+    accuracies_for_ece = np.array(accuracies_for_ece)
+    bin_boundaries = np.linspace(0, 1, 11)
+    ece = 0.0
+    for b in range(10):
+        lo, hi = bin_boundaries[b], bin_boundaries[b + 1]
+        mask = (confidences > lo) & (confidences <= hi)
+        if mask.sum() == 0:
+            continue
+        ece += mask.sum() / n * abs(accuracies_for_ece[mask].mean() - confidences[mask].mean())
+
+    return {
+        'acc_t1': float(acc_t1),
+        'acc_t2': float(acc_t2),
+        'acc_t3': float(acc_t3),
+        'gain': float(gain),
+        'ece': float(ece),
+        'r_norm': float(np.mean(r_norms)) if r_norms else 0.0,
+        'delta_norm': float(np.mean(deltas)) if deltas else 0.0,
+    }
+
+
+def compute_all_metrics_multi_donor(target_net, donor_nets, X, y):
+    """Multi-donor ensemble feedback를 사용한 메트릭 계산.
+
+    target_net의 피드백을 여러 donor 모델 출력의 평균으로 대체.
+    compute_all_metrics와 동일한 dict 반환.
+
+    Args:
+        target_net: 평가 대상 모델
+        donor_nets: list of donor models
+        X: 테스트 입력 (n_samples, input_size)
+        y: 테스트 레이블 (n_samples, n_classes) one-hot
+
+    Returns:
+        dict with keys: acc_t1, acc_t2, acc_t3, gain, ece, r_norm, delta_norm
+    """
+    from src.ablation import forward_sequence_multi_donor
+
+    n = len(X)
+    correct_t1 = 0
+    correct_t2 = 0
+    correct_t3 = 0
+    r_norms = []
+    deltas = []
+    confidences = []
+    accuracies_for_ece = []
+
+    for i in range(n):
+        outputs, caches = forward_sequence_multi_donor(
+            target_net, donor_nets, X[i], T=3
+        )
+        true_cls = np.argmax(y[i])
+
+        if np.argmax(outputs[0]) == true_cls:
+            correct_t1 += 1
+        if np.argmax(outputs[1]) == true_cls:
+            correct_t2 += 1
+        if np.argmax(outputs[2]) == true_cls:
+            correct_t3 += 1
+
+        # recurrent contribution norm (t=2, t=3)
+        for t in [1, 2]:
+            feedback = caches[t]['feedback']
+            contrib = feedback @ target_net.W_rec
+            r_norms.append(np.linalg.norm(contrib))
+
+        # step delta
+        for t in range(1, 3):
+            deltas.append(np.linalg.norm(outputs[t] - outputs[t - 1]))
+
+        # ECE data (t=3)
+        probs = softmax(outputs[2])
+        confidences.append(np.max(probs))
+        accuracies_for_ece.append(float(np.argmax(outputs[2]) == true_cls))
+
+    acc_t1 = correct_t1 / n
+    acc_t2 = correct_t2 / n
+    acc_t3 = correct_t3 / n
+    gain = acc_t3 - acc_t1
+
+    confidences = np.array(confidences)
+    accuracies_for_ece = np.array(accuracies_for_ece)
+    bin_boundaries = np.linspace(0, 1, 11)
+    ece = 0.0
+    for b in range(10):
+        lo, hi = bin_boundaries[b], bin_boundaries[b + 1]
+        mask = (confidences > lo) & (confidences <= hi)
+        if mask.sum() == 0:
+            continue
+        ece += mask.sum() / n * abs(accuracies_for_ece[mask].mean() - confidences[mask].mean())
+
+    return {
+        'acc_t1': float(acc_t1),
+        'acc_t2': float(acc_t2),
+        'acc_t3': float(acc_t3),
+        'gain': float(gain),
+        'ece': float(ece),
+        'r_norm': float(np.mean(r_norms)) if r_norms else 0.0,
+        'delta_norm': float(np.mean(deltas)) if deltas else 0.0,
+    }
+
+
 # ──────────────────────────────────────────────
 # Wilcoxon Signed-Rank Exact Test (scipy 불필요)
 # ──────────────────────────────────────────────

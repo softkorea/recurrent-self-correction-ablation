@@ -10,16 +10,18 @@
 
 ### 1.1 The Experimental Design Is Paired
 
-Ten independent models (seeds 0–9) are trained, then the **same model** is evaluated under Baseline and each treatment (A, B1, C1, C2, D, D'). The comparison units are:
+Ten independent models (seeds 0–9) are trained. For Groups A, B1, C1, and C2, the **same trained model** is evaluated under Baseline and each treatment (post-hoc intervention). For Groups D and D', **separately trained seed-matched models** are compared against the Baseline model with the same seed — a matched-design comparison, not a within-model ablation. The comparison units are:
 
 ```
-(Baseline seed=0 vs A seed=0),
+(Baseline seed=0 vs A seed=0),    ← same model, post-hoc intervention
 (Baseline seed=1 vs A seed=1),
 ...
-(Baseline seed=9 vs A seed=9)
+(Baseline seed=0 vs D seed=0),    ← different model, seed-matched
+...
+(Baseline seed=9 vs D' seed=9)
 ```
 
-This is a **paired samples** design, so a paired test (Wilcoxon signed-rank) is appropriate — not an independent samples test (Mann-Whitney U).
+In both cases, pairing by seed controls for inter-model variance, making a paired test (Wilcoxon signed-rank) appropriate — not an independent samples test (Mann-Whitney U).
 
 ### 1.2 Why Not a Parametric Test (Paired t-test)
 
@@ -133,9 +135,9 @@ To directly test the claim that non-veridical feedback is worse than no feedback
 | Comparison | T+ | T- | T | exact p | 95% Bootstrap CI | Direction |
 |------------|----|----|---|---------|-------------------|-----------|
 | C1 vs A | 1.0 | 54.0 | 1.0 | 0.003906 | [−0.095, −0.036] | C1 < A |
-| C2 vs A | 49.0 | 6.0 | 6.0 | 0.027344 | [−0.101, −0.015] | C2 < A |
+| C2 vs A | 6.0 | 49.0 | 6.0 | 0.027344 | [−0.101, −0.015] | C2 < A |
 
-Both comparisons confirm that non-veridical feedback actively degrades performance below the no-feedback baseline. These are reported as supplementary contrasts outside the primary Holm-Bonferroni family.
+These two comparisons are treated as a secondary Holm-Bonferroni family (k=2). Corrected p-values: C1 vs A = 0.003906 × 2 = 0.007813; C2 vs A = 0.027344 × 1 = 0.027344. Both survive α = 0.05, confirming that non-veridical feedback actively degrades performance below the no-feedback baseline.
 
 ### 3.3 Verification: Agreement with scipy.stats.wilcoxon
 

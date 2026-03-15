@@ -25,7 +25,7 @@ from collections import defaultdict
 
 from src.network import RecurrentMLP
 from src.training import generate_data, train
-from src.metrics import compute_all_metrics_with_clone
+from src.metrics import compute_all_metrics_with_clone, wilcoxon_exact
 
 N_MODELS = 10
 NOISE_LEVELS = [0.1, 0.2, 0.3, 0.5, 0.7, 1.0]
@@ -134,6 +134,31 @@ def main():
             for _ in range(10000)]
     print(f"[C2-DM] 95% CI: [{np.percentile(boot, 2.5):+.4f}, "
           f"{np.percentile(boot, 97.5):+.4f}]", flush=True)
+
+    # Wilcoxon exact tests vs Baseline and Group A from main experiment
+    main_csv = 'results/raw_metrics.csv'
+    if os.path.exists(main_csv):
+        baseline_gains = defaultdict(list)
+        a_gains = defaultdict(list)
+        with open(main_csv, 'r') as f:
+            reader = csv.DictReader(f)
+            for r in reader:
+                if float(r['noise_level']) == 0.5:
+                    if r['group'] == 'Baseline':
+                        baseline_gains[int(r['seed_model'])].append(float(r['gain']))
+                    elif r['group'] == 'A':
+                        a_gains[int(r['seed_model'])].append(float(r['gain']))
+        baseline_means = [np.mean(baseline_gains[s]) for s in sorted(baseline_gains.keys())]
+        a_means = [np.mean(a_gains[s]) for s in sorted(a_gains.keys())]
+
+        if len(baseline_means) == len(model_gains):
+            T_bl, p_bl = wilcoxon_exact(model_gains, baseline_means)
+            print(f"[C2-DM] Wilcoxon exact vs Baseline: T={T_bl:.1f}, p={p_bl:.6f}", flush=True)
+        if len(a_means) == len(model_gains):
+            T_a, p_a = wilcoxon_exact(model_gains, a_means)
+            print(f"[C2-DM] Wilcoxon exact vs Group A:  T={T_a:.1f}, p={p_a:.6f}", flush=True)
+    else:
+        print(f"[C2-DM] Warning: {main_csv} not found, skipping Wilcoxon tests", flush=True)
 
 
 if __name__ == '__main__':

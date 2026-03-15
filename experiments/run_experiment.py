@@ -24,8 +24,8 @@ import csv
 import multiprocessing as mp
 from functools import partial
 
-from src.network import RecurrentMLP
-from src.training import generate_data, train
+from src.network import RecurrentMLP, DeepFeedforwardMLP
+from src.training import generate_data, train, train_deep_ff, evaluate_accuracy_deep_ff
 from src.ablation import (
     ablate_recurrent, ablate_random, ablate_structural,
     deep_copy_weights, restore_weights,
@@ -128,6 +128,20 @@ def run_single_model(args):
     net_dp.disable_recurrent_loop()
     train(net_dp, X_train_d, y_train_d, epochs=TRAIN_EPOCHS, lr=TRAIN_LR, T=T)
     rows.append(make_row("D'", compute_all_metrics(net_dp, X_test, y_test)))
+
+    # Group D'': Compute-matched FF (6-layer deep)
+    net_dpp = DeepFeedforwardMLP(input_size=10, hidden_size=10, n_hidden=6,
+                                  output_size=5, seed=seed_model)
+    train_deep_ff(net_dpp, X_train_d, y_train_d, epochs=TRAIN_EPOCHS, lr=TRAIN_LR)
+    acc_dpp = evaluate_accuracy_deep_ff(net_dpp, X_test, y_test)
+    rows.append({
+        'seed_model': seed_model,
+        'group': "D''",
+        'seed_ablation': 0,
+        'noise_level': noise_level,
+        'acc_t1': acc_dpp, 'acc_t2': acc_dpp, 'acc_t3': acc_dpp,
+        'gain': 0.0, 'ece': 0.0, 'r_norm': 0.0, 'delta_norm': 0.0,
+    })
 
     return rows
 
@@ -259,7 +273,7 @@ def run_full_experiment():
     print(f"  {'Group':12s}  {'acc_t1':>10s}  {'acc_t3':>10s}  {'gain':>14s}  {'n':>3s}", flush=True)
     print(f"  {'-'*12}  {'-'*10}  {'-'*10}  {'-'*14}  {'-'*3}", flush=True)
 
-    for g in ['Baseline', 'A', 'B1', 'B2', 'C1', 'D', "D'"]:
+    for g in ['Baseline', 'A', 'B1', 'B2', 'C1', 'D', "D'", "D''"]:
         if g in model_gains:
             gains = model_gains[g]
             t1s = model_t1[g]
@@ -272,7 +286,7 @@ def run_full_experiment():
     # Bootstrap 95% CI (모델 단위)
     print("\n95% Bootstrap CI (noise=0.5, model-level):", flush=True)
     rng = np.random.RandomState(999)
-    for g in ['Baseline', 'A', 'B1', 'C1', 'D', "D'"]:
+    for g in ['Baseline', 'A', 'B1', 'C1', 'D', "D'", "D''"]:
         if g in model_gains and len(model_gains[g]) > 1:
             gains = np.array(model_gains[g])
             boot = [np.mean(rng.choice(gains, len(gains), replace=True)) for _ in range(10000)]
@@ -283,7 +297,7 @@ def run_full_experiment():
     print("\nHolm-Bonferroni corrected p-values (Baseline vs each, noise=0.5, N=10):", flush=True)
     baseline_gains = np.array(model_gains.get('Baseline', []))
     p_values = {}
-    for g in ['A', 'B1', 'C1', 'C2', 'D', "D'"]:
+    for g in ['A', 'B1', 'C1', 'C2', 'D', "D'", "D''"]:
         if g in model_gains:
             g_gains = np.array(model_gains[g])
             if len(g_gains) > 1 and len(baseline_gains) > 1:

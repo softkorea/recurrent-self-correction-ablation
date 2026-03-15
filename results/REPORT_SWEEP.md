@@ -54,13 +54,13 @@ causing the network to focus on feedforward performance and ignore the recurrent
 | τ | mean gain | Emergence | Interpretation |
 |---|-----------|-----------|----------------|
 | **1.0** | **+0.0248** | **13/16 (81%)** | Optimal. Sharp feedback |
-| 1.5 | +0.0180 | 14/16 (88%) | Good |
-| 2.0 | +0.0145 | 12/16 (75%) | Good (default in main experiment) |
-| 3.0 | +0.0148 | 11/16 (69%) | Borderline |
-| 5.0 | +0.0040 | 4/16 (25%) | Weakened. Feedback signal diluted |
+| 1.5 | +0.0175 | 11/16 (69%) | Good |
+| 2.0 | +0.0142 | 11/16 (69%) | Good (default in main experiment) |
+| 3.0 | +0.0143 | 12/16 (75%) | Good |
+| 5.0 | +0.0040 | 7/16 (44%) | Weakened. Feedback signal diluted |
 
-**Key finding**: Emergence is broadly maintained across τ=1.0–3.0.
-The sharp decline at τ=5.0 occurs because high temperature makes `tanh(output/5.0)` nearly linear (≈ output/5),
+**Key finding**: Emergence is stable across τ=1.0–3.0 (69–81%).
+The decline at τ=5.0 (44%) occurs because high temperature makes `tanh(output/5.0)` nearly linear (≈ output/5),
 reducing the discriminability of the feedback signal.
 Conversely, τ=1.0 risks tanh saturation, but in practice the network adapts and shows the strongest emergence.
 
@@ -70,8 +70,8 @@ Conversely, τ=1.0 risks tanh saturation, but in practice the network adapts and
 |----|-----------|-----------|----------------|
 | 0.1 | +0.0192 | 15/20 (75%) | Slightly optimal |
 | 0.2 | +0.0155 | 14/20 (70%) | |
-| 0.3 | +0.0128 | 12/20 (60%) | |
-| 0.5 | +0.0127 | 13/20 (65%) | |
+| 0.3 | +0.0128 | 14/20 (70%) | |
+| 0.5 | +0.0127 | 11/20 (55%) | |
 
 **Key finding**: w2 has only marginal influence on emergence.
 t=2 corresponds to the correction "process" — whether strong or weak pressure is applied to this intermediate step,
@@ -85,8 +85,8 @@ The table below shows the fraction of 4 w2 values where emergence was confirmed 
 ```
          τ=1.0  τ=1.5  τ=2.0  τ=3.0  τ=5.0
 w1=0.0    4/4    4/4    4/4    4/4    3/4     → 95% (19/20)
-w1=0.1    4/4    4/4    4/4    4/4    2/4     → 90% (18/20)
-w1=0.2    4/4    4/4    3/4    3/4    1/4     → 75% (15/20)
+w1=0.1    4/4    4/4    3/4    4/4    3/4     → 90% (18/20)
+w1=0.2    4/4    3/4    3/4    4/4    1/4     → 75% (15/20)
 w1=0.3    1/4    0/4    1/4    0/4    0/4     → 10% ( 2/20) ← failure region
 ```
 
@@ -103,21 +103,21 @@ This demonstrates that emergence is not "a phenomenon lucky enough to be observe
 | 2 | 0.0 | 0.2 | 1.0 | +0.053 |
 | 3 | 0.0 | 0.3 | 1.0 | +0.052 |
 | 4 | 0.0 | 0.5 | 1.0 | +0.051 |
-| 5 | 0.0 | 0.1 | 1.5 | +0.047 |
+| 5 | 0.1 | 0.1 | 1.0 | +0.051 |
 
-All top 5 have **w1=0.0**, and the top 4 have τ=1.0. w2 has virtually no effect.
+All top 4 have **w1=0.0**; the top 5 all have **τ=1.0**. w2 has virtually no effect.
 
 ### Bottom 5 (Emergence Failure)
 
 | Rank | w1 | w2 | τ | mean gain |
 |------|----|----|---|-----------|
-| 76 | 0.3 | 0.2 | 2.0 | -0.006 |
-| 77 | 0.0 | 0.5 | 5.0 | -0.007 | ← even w1=0.0 fails at τ=5.0 |
-| 78 | 0.3 | 0.3 | 1.5 | -0.008 |
-| 79 | 0.3 | 0.5 | 1.5 | -0.008 |
+| 76 | 0.3 | 0.1 | 5.0 | -0.007 |
+| 77 | 0.3 | 0.3 | 1.5 | -0.008 |
+| 78 | 0.3 | 0.5 | 1.5 | -0.008 |
+| 79 | 0.3 | 0.3 | 2.0 | -0.011 |
 | 80 | 0.3 | 0.5 | 2.0 | **-0.012** |
 
-Common factor in bottom configurations: **w1=0.3** (most cases) or **τ=5.0**.
+Common factor in bottom configurations: all have **w1=0.3**.
 
 ## 6. Heatmap Interpretation
 
@@ -175,7 +175,7 @@ In `feedback = tanh(prev_output / τ)`:
 |----------|--------|
 | "Is emergence visible in only one specific combination?" | **No.** Confirmed in 54/80 (68%) configurations. |
 | "Do w1, w2, and τ all need precise tuning?" | **No.** If w1 ≤ 0.2, it works across τ=1.0–3.0. w2 is nearly irrelevant. |
-| "Is the original experiment (w1=0, w2=0.2, τ=2.0) cherry-picked?" | **No.** This combination (gain=+0.042) ranks 13th/80. Mid-range, not optimal. |
+| "Is the original experiment (w1=0, w2=0.2, τ=2.0) cherry-picked?" | **No.** This combination (gain=+0.042) ranks 8th/80. Upper range, not optimal. |
 | "Do results depend on the random seed?" | **No.** In emergence configurations, 60%+ models show positive gain (10 independent seeds). |
 
 ### Robustness Range
@@ -193,13 +193,13 @@ Range where emergence is weak or absent:
 
 ## 9. Position of Our Experimental Setting
 
-The default setting used in our main experiment (w1=0.0, w2=0.2, τ=2.0, gain=+0.042):
-- Ranks **13th** out of 80 combinations (top 16%)
-- 78% of the optimal value (w1=0.0, w2=0.1, τ=1.0, gain=+0.054)
-- Selected from the **mid-range**, not the optimum
+The default setting used in our main experiment (w1=0.0, w2=0.2, τ=2.0, gain=+0.0415):
+- Ranks **8th** out of 80 combinations (top 10%)
+- 77% of the optimal value (w1=0.0, w2=0.1, τ=1.0, gain=+0.054)
+- Not the optimum, though in the upper portion of the explored grid
 
 This demonstrates that our experiment is not based on a cherry-picked setting. Emergence is observed
-even with a reasonable mid-range configuration, not just when reporting the optimal setting.
+even with a non-optimal configuration, not just when reporting the best setting.
 
 ## 10. Generated Files
 
@@ -227,8 +227,8 @@ even with a reasonable mid-range configuration, not just when reporting the opti
 > with w2 having negligible effect. Emergence fails only when the t=1 loss
 > weight is too high (w1 ≥ 0.3, removing the incentive for iterative correction)
 > or when the feedback temperature is too high (τ ≥ 5.0, diluting the feedback signal).
-> Our reported results use w1=0.0, w2=0.2, τ=2.0, which ranks 13th/80 — a mid-range
-> configuration, not a cherry-picked optimum.
+> Our reported results use w1=0.0, w2=0.2, τ=2.0, which ranks 8th/80 — not the optimum,
+> though in the upper portion of the explored grid.
 
 ### Appendix: Raw Sweep Table
 
@@ -241,4 +241,4 @@ Reproducible from `results/sweep_hyperparams.csv`.
 2. **The key factor is w1 (t=1 loss weight)**: Signaling to the network that "the initial prediction is free" is most important.
 3. **τ (temperature) is secondary**: An adequate range (1.0–3.0) is sufficient. Weakened only at the extreme value (5.0).
 4. **w2 (t=2 loss weight) is irrelevant**: Nearly identical results across the full range.
-5. **P-hacking possibility excluded**: Our experimental setting is a mid-range value, not the optimum, and results are reproducible across a broad range.
+5. **P-hacking possibility excluded**: Our experimental setting is not the optimum (8th/80), and results are reproducible across a broad range.
