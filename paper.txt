@@ -1,0 +1,393 @@
+# Mechanistic Dissection of Learned Feedback-Contract Specificity in a 35-Neuron Network
+
+**Author**: [Anonymous for review]
+**Affiliation**: [Anonymous for review]
+
+-----
+
+## Abstract
+
+Self-correction — the ability to revise one’s own output through iterative refinement — is widely studied in both biological and artificial systems. Here we construct a minimal recurrent network of 35 neurons and mechanistically dissect how it learns to correct its predictions through output feedback. We demonstrate that (1) self-correction develops under appropriate learning conditions; under a variable-noise task providing independent noisy observations at each timestep, the Baseline achieves correction gain = +0.151 (95% CI excluding zero), substantially exceeding the static-input gain (+0.042), consistent with evidence accumulation through recurrent feedback; (2) ablating the recurrent loop eliminates self-correction (Group A gain ≈ 0 under both static and variable-noise conditions); (3) feedback utility is graded by geometric compatibility: self-feedback produces the largest gain, clone-model feedback is intermediate (harmful at small scales, neutral at larger scales), and shuffled feedback actively degrades performance, with feedback interpolation (α sweep) revealing smooth, monotonic degradation as self-signal fidelity decreases; (4) trajectory analysis in PCA-projected hidden-state space shows that corrected trials converge toward class centroids under self-feedback but diverge under clone feedback, with mean cosine divergence of 0.73 between self and clone W_rec contributions (compared to 1.00 for random and 0.36 for same-class resampled self); (5) parameter-matched and compute-matched feedforward controls produce zero correction gain; and (6) self-correction and the fake mirror effect replicate on MNIST (130k parameters), while the clone feedback effect is scale-dependent: harmful at small scales but neutral or slightly positive at larger hidden widths under variable noise, consistent with representation convergence at higher capacity. These findings provide evidence for *learned feedback-contract specificity*: the recurrent weights are co-adapted to the model’s own output geometry, and the continuous fidelity of this alignment — not merely the presence of a feedback signal — determines whether iterative refinement succeeds in this minimal setting.
+
+**Keywords**: feedback-contract specificity, self-correction, iterative refinement, output-feedback processing, ablation, recurrent neural network, minimal model, mechanistic interpretability
+
+-----
+
+## 1. Introduction
+
+### 1.1 The Inseparability Question
+
+Chain-of-thought prompting, self-consistency decoding, and test-time compute scaling all assume that a model benefits from processing its own prior output — but would the output of an equally competent stranger work just as well? If a model’s recurrent weights are co-adapted to its own output geometry, substituting another model’s output should degrade performance even when that output is statistically valid. If, on the other hand, any well-formed feedback signal suffices, the benefit is generic rather than self-specific. The question has practical relevance: training methods that rely on external feedback — such as RLHF or distillation — implicitly assume that the feedback signal is compatible with the model’s internal processing, an assumption that our toy-scale results suggest deserves closer empirical scrutiny at larger scales. To our knowledge, this distinction has not been tested causally.
+
+An analogous coupling exists in biological systems: damage to prefrontal monitoring circuits impairs not only self-monitoring but also task performance more broadly (Fleming and Dolan, 2012). Whether artificial neural networks exhibit a similar inseparability — where removing the self-referential pathway degrades the system — has not been experimentally tested. Answering this question causally requires a system where every weight and activation can be directly inspected.
+
+### 1.2 Why a Minimal Model
+
+A 35-neuron recurrent network makes three classes of analysis possible that larger systems cannot support. First, the recurrent weight matrix W_rec (5×10, 50 parameters) can be directly visualized and arithmetically decomposed — no summary statistics or probing classifiers required. Second, hidden-state trajectories can be tracked per-trial in their native 10-dimensional space, without dimensionality-reduction artifacts. Third, causal interventions that would be intractable at scale — per-neuron knockout, wrong-trajectory feedback substitution, cosine divergence null baselines across 2,000 trials — become routine. This is the logic of Hodgkin and Huxley’s squid giant axon: the preparation was chosen not because squid neurons generalize to all neurons, but because its size permitted measurements — direct intracellular recording — that were impossible in smaller axons. The analogy is methodological, not ontological: our 35-neuron scale permits causal intervention techniques (wrong-trajectory control, divergence null baseline, W_rec decomposition) that would be infeasible at the scales where these systems are practically deployed. The open question is whether the phenomenon persists at scale, not whether the preparation itself generalizes. Scale verification (§3.15) confirms which findings persist and which do not.
+
+### 1.3 Prior Work
+
+Recent work has established that metacognitive capabilities can arise spontaneously in recurrent neural networks. Ma et al. (2025) demonstrated that uncertainty-monitoring behavior emerges without explicit training across 16 cognitive tasks in moment neural networks. Similarly, Li et al. (2025) showed that tiny recurrent neural networks of 1–4 units can discover cognitive strategies that model biological decision-making more accurately than classical cognitive models, with ablation studies revealing which architectural components are essential. In the domain of artificial life, evolutionary simulations have shown that metamemory based on self-reference to one’s own memory emerges in neural networks with neuromodulation, producing structures that parallel established models of human metamemory (Yamato et al., 2022).
+
+On the theoretical side, Schmidhuber and colleagues have argued formally that self-referential architectures — where a network can modify or observe its own parameters — are representationally necessary for true meta-learning (Kirsch and Schmidhuber, 2022). Our system is self-referential in a weaker sense (output feedback rather than parameter self-modification), but the ablation logic is parallel: this theoretical claim has not been accompanied by empirical ablation evidence showing that removing the feedback pathway eliminates self-correction.
+
+In the domain of iterative computation, Graves (2016) introduced Adaptive Computation Time (ACT), and Banino et al. (2021) proposed PonderNet, both of which train recurrent networks to determine dynamically how many steps to compute before output. These systems achieve iterative refinement but require explicit halting mechanisms and specialized architectural modifications.
+
+Several adjacent literatures inform but do not address our central question. Echo state networks (Jaeger, 2001) and liquid state machines (Maass et al., 2002) study how recurrent dynamics process temporal signals but do not isolate self-referential output feedback for iterative correction. Evidence accumulation models (Gold and Shadlen, 2007) describe temporal integration of noisy observations in perceptual decision-making; our variable-noise task resembles this setting, but the critical difference is that our network accumulates through self-referential output feedback, not through direct sensory integration — as indicated by the Baseline's positive gain occurring only in the presence of recurrent feedback. Sussillo and Barak (2013) showed that trained RNNs can be understood through fixed-point and attractor analysis; our trajectory analysis (§3.7) connects to this framework, with corrected trials converging toward class-appropriate attractors under self-feedback but diverging under clone feedback. Marino et al. (2018) proposed iterative amortized inference, where recurrent refinement improves approximate posterior estimates; our self-correction mechanism is conceptually related but operates without a probabilistic framework and at a scale where the full mechanism can be inspected.
+
+### 1.4 The Gap
+
+Existing research has established that iterative refinement capabilities *can develop* in neural networks. What remains untested is the reverse question: *does removing the self-referential pathway degrade self-correction?* To our knowledge, no prior study has isolated the contribution of model-specific output feedback from mere information flow in a minimal, fully transparent network where every neuron and connection can be directly inspected.
+
+### 1.5 Contributions
+
+This paper makes the following contributions:
+
+First, we demonstrate that self-correction develops in a 35-neuron recurrent network under specific learning conditions (temporal freedom and adequate gradient flow), and replicates under a variable-noise task where each timestep provides an independent noisy observation. Under variable noise, Baseline correction gain = +0.151 (95% CI excluding zero), demonstrating that the recurrent model accumulates evidence across timesteps. Group A (recurrent ablation) gain ≈ 0 (p = 0.754 vs. zero), consistent with the statistical expectation for a stateless model under i.i.d. inputs — confirming that input variation alone, without recurrence, is insufficient. Under static input, Baseline gain = +0.042 with the same qualitative pattern.
+
+Second, the “fake mirror” test reveals a graded structure of feedback utility: self-feedback produces positive gain, clone feedback (well-formed output from an identically trained model) is intermediate, and shuffled feedback actively degrades performance below the no-feedback baseline. Under static input, gain follows the ordering self (+0.042) > none (0.000) > clone (−0.059) ≈ shuffle (−0.064). The clone-feedback effect is scale-dependent: harmful at the 35-neuron scale but neutral at larger scales and on MNIST, consistent with representation convergence at higher capacity (§3.15–3.16). This graded pattern supports an interpretation of *learned feedback-contract specificity* modulated by geometric compatibility — though the boundary between model-specific contract violation and ordinary closed-loop co-adaptation remains an open question (see §4.6).
+
+Third, feedback interpolation (α sweep from pure self to pure contamination) maps a smooth, monotonic degradation, revealing a “soft” feedback contract with zero-crossing at α ≈ 0.2–0.3. This continuous evidence complements the binary ablation contrasts and shows that the feedback contract degrades gracefully rather than collapsing at a threshold.
+
+Fourth, mechanistic analysis — hidden-state trajectories in PCA-projected space, W_rec dissection, and cosine divergence (0.73 between self and clone W_rec contributions, compared to 1.00 for random and 0.36 for same-class resampled self) — provides geometric evidence that feedback-contract specificity operates at the continuous logit level, not at the discrete class level. A wrong-trajectory control confirms that the same model's output from a different trial barely degrades performance (gain ≈ Baseline), while clone output degrades it substantially (p = 0.002 under VN). A learned affine alignment decomposes the C2 degradation into ~60% linear representation misalignment and ~40% non-linear model-specific residual (p < 0.01 under VN).
+
+Fifth, parameter-matched (D') and compute-matched (D'') feedforward controls confirm that neither additional capacity nor computational depth can substitute for recurrent self-reference. A hyperparameter sweep across 80 configurations (68% showing self-correction) demonstrates robustness.
+
+-----
+
+## 2. Methods
+
+### 2.1 Architecture
+
+We constructed a small recurrent multi-layer perceptron (RecurrentMLP) with four layers: input (10 neurons), hidden layer 1 (10 neurons), hidden layer 2 (10 neurons), and output (5 neurons), totaling 35 neurons. Hidden layers use ReLU activation; the output layer is linear. A recurrent connection feeds the previous output back to hidden layer 1 via a temperature-scaled hyperbolic tangent: feedback = tanh(y_{t-1} / τ), where τ is the feedback temperature.
+
+The network was deliberately kept small enough that all neurons and connections can be simultaneously visualized — a design decision motivated by the goal of mechanistic transparency. The entire system was implemented in pure NumPy without deep learning frameworks, ensuring that every computation is directly inspectable and that no hidden optimizer behavior, automatic differentiation artifact, or framework-level abstraction influences the results. Numerical gradient checking (§2.3) independently verified correctness.
+
+### 2.2 Task: Static Pattern Classification with Self-Correction
+
+To isolate self-reference from memory, we used a static input task. Five prototype patterns were defined over 10 input dimensions: each class k activates dimensions 2k and 2k+1 with amplitude 1.0, and adjacent class dimensions with amplitude 0.3 (inter-class ambiguity). Input samples were generated by adding Gaussian noise (σ = noise_level) to the prototype. On each trial, the network receives the same noise-corrupted pattern at every timestep t = 1, 2, 3. The task is 5-class classification. Because the input is identical at every timestep, the recurrent loop cannot serve as a memory pathway — its only function is to allow the network to observe and revise its own prior output.
+
+This design cleanly separates two potential roles of recurrence: memory (carrying information about past inputs) and self-correction (carrying information about past outputs). In our task, only the latter is possible.
+
+### 2.3 Training and the Conditions for Induction
+
+Training used full-batch gradient descent with learning rate 0.01 for 500 epochs on 200 training samples (200 held-out test samples), with T = 3 timesteps per trial. Backpropagation through time was implemented as a 3-step unroll, with numerical gradient checking (relative error threshold 1e-4) to verify correctness. Numerical gradient checking on a representative model (seed=0) yielded maximum relative errors of 6.57 × 10⁻⁸ (static) and 1.48 × 10⁻⁷ (variable noise) across all weight matrices, well below the 1e-4 acceptance threshold.
+
+Two modifications appeared important for reliably inducing self-correction in the reported setup:
+
+**Time-weighted loss.** The per-timestep loss L(t) is softmax cross-entropy between the output logits and the one-hot target. The total loss is weighted across timesteps as L = w1 · L(t=1) + w2 · L(t=2) + 1.0 · L(t=3). With uniform weighting (w1 = w2 = 1/3), the network optimizes for immediate accuracy at t=1 and has no incentive to develop an iterative correction strategy. Setting w1 = 0.0 grants the network temporal freedom: “your initial guess carries no penalty; only the final answer matters.” This creates optimization pressure to use the feedback loop for refinement.
+
+**Temperature scaling.** Without temperature scaling, output logits quickly exceed ±3, saturating the tanh feedback function and driving the gradient of the recurrent weights to near zero. Setting τ = 2.0 prevents saturation and maintains gradient flow through the feedback pathway.
+
+The failure to develop self-correction under uniform loss and unscaled feedback is itself informative: it demonstrates that the phenomenon depends on learning conditions, not latent capacity.
+
+### 2.4 Ablation Design
+
+We employed ten evaluation conditions (Baseline plus nine ablation/control conditions) to isolate the contribution of self-referential feedback:
+
+**Baseline**: The fully trained recurrent model, evaluated normally.
+
+**Group A (Recurrent ablation)**: All recurrent weights set to zero post-training. The feedback pathway is structurally intact but carries no signal. This tests whether self-correction depends on the recurrent loop.
+
+**Group B1 (Random ablation)**: The same number of weights (50) randomly zeroed across all weight matrices. Repeated 30 times per model with different random seeds. This controls for the general effect of removing an equal number of parameters.
+
+**Group B2 (Structured ablation)**: The h2-to-output weight matrix zeroed entirely, removing a major feedforward pathway. This controls for the effect of removing an entire structural pathway (as opposed to the scattered damage of B1).
+
+**Group C1 (Permutation feedback)**: The recurrent connections are preserved, but the feedback vector is element-wise permuted at each timestep. This maintains the exact distribution, norm, and dimensionality of the feedback signal while destroying its coordinate-structured identity — the network receives a scrambled version of its own output. The permutation was independently resampled at each timestep within each trial, using a per-model random seed. We refer to this as the “non-veridical feedback” or “fake mirror” condition.
+
+**Group C2 (Clone feedback)**: The recurrent connections are preserved, and the feedback is replaced with the output of a different model trained with identical architecture and procedure but a different random seed. Each target model (seed 0–9) is paired with a separately trained donor model (seed 100–109), ensuring full statistical independence between pairs. The clone’s output is well-formed, in-distribution, and a valid classification output — but it is not the model’s own. This condition controls for marginal-distribution mismatch: the clone’s output has valid statistics (correct dimensionality, plausible magnitudes, trained output geometry), so any remaining degradation indicates trajectory-level specificity rather than distributional artifact. As a robustness check, we also tested a data-matched variant in which each donor model was trained on the exact same empirical data (identical noise realizations) as its target, differing only in weight initialization, to isolate the pure effect of initialization trajectory from any data-distribution confound.
+
+**Group C2-aligned (Affine-aligned clone feedback)**: To disentangle linear representation misalignment from model-specific geometric incompatibility in the C2 condition, we fitted a learned affine transform from donor logits to target logits. Both models were run with self-feedback on calibration data (target's training set, 200 samples × 3 timesteps = 600 logit pairs); a least-squares regression target_logit ≈ W · donor_logit + b (30 parameters: 5×5 weight matrix + 5 bias) was fitted and applied to donor outputs before injection during evaluation on the held-out test set.
+
+**Group D (Feedforward baseline)**: A network trained from scratch with no recurrent connections. This tests whether recurrence was necessary for the observed behavior to develop.
+
+**Group D’ (Parameter-matched feedforward)**: A feedforward network with an additional skip connection from input to output (50 weights), matching the total parameter count of the recurrent model. This addresses the possibility that the recurrent model’s advantage is simply due to having more parameters.
+
+**Group D’’ (Compute-matched feedforward)**: A deep feedforward network with 6 hidden layers of 10 neurons each (Input(10) → H1(10) → ... → H6(10) → Output(5)), matching the computational depth of the recurrent model’s 3-timestep unroll (3 timesteps × 2 hidden layers = 6 layer traversals). This has 715 parameters (vs. Baseline 325) and approximately 650 multiply-add operations (vs. Baseline ~900 MACs across 3 timesteps). This addresses the possibility that the recurrent model’s advantage comes from additional computation rather than from feedback content.
+
+### 2.5 Variable-Noise Task
+
+To move beyond the static-input setting — where removing recurrence deterministically produces zero gain because no new information enters across timesteps — we introduce a variable-noise variant: at each timestep t, the network receives x_t = prototype_k + ε_t, where ε_t ~ N(0, σ²I) is independently sampled. Note that a stateless model under i.i.d. inputs still has expected gain of zero by symmetry; the VN task's value is not that it changes the Group A baseline, but that it provides multiple independent observations of the same class across timesteps, creating an opportunity for temporal evidence accumulation that the static-input setting cannot offer. The task largely preserves the separation of memory and self-correction: although the class identity is constant, prior outputs are functions of earlier noisy inputs, so recurrence may carry some indirect past-input information. Models were retrained under variable noise with the same hyperparameters (w1=0.0, w2=0.2, τ=2.0, 500 epochs). Ten donor models (seeds 100–109) were also retrained for the C2 condition. Under variable noise, the donor and target networks were driven by the same per-timestep noisy input sequence during evaluation, ensuring that any difference in output is attributable to model identity rather than input variation.
+
+### 2.6 Feedback Interpolation
+
+To map the continuous boundary of feedback-contract specificity, we swept the interpolation coefficient α ∈ {0.0, 0.1, ..., 1.0} in: feedback_t = α · y_self_{t-1} + (1-α) · y_other_{t-1}, with three contamination types: Self–Zero (y_other = 0), Self–Shuffle (y_other = permuted y_self), and Self–Clone (y_other = clone output). All 10 model pairs were evaluated at noise = 0.5. This provides graded evidence for whether the feedback contract is "hard" (sharp threshold) or "soft" (linear degradation).
+
+### 2.7 Mechanistic Analysis
+
+To exploit the glass-box transparency afforded by the 35-neuron architecture, we performed three mechanistic analyses on the static-input models:
+
+**(a) Activation logging and trial classification.** For each of the 10 models × 200 test samples × 3 timesteps, we recorded all internal activations (pre/post-activation at each layer, feedback signals, recurrent contributions). Trials were classified as *corrected* (wrong at t=1, correct at t=3), *stable correct*, *stable incorrect*, or *over-corrected* (correct at t=1, wrong at t=3).
+
+**(b) Hidden-state trajectory analysis.** Hidden Layer 1 activations (10-dim) were projected into a shared 2-component PCA space (fitted on Baseline t=1 activations). Trajectories (t=1 → t=2 → t=3) were plotted by trial category and compared across Baseline and C2 conditions.
+
+**(c) Clone feedback geometric analysis.** For each trial, we computed the self-feedback W_rec contribution (tanh(y_self/τ) · W_rec) and clone-feedback W_rec contribution (tanh(y_clone/τ) · W_rec), measured their cosine divergence, and correlated divergence with correction outcome.
+
+### 2.8 Neuron Importance Analysis
+
+To quantify the contribution of individual neurons to pattern recognition and self-correction, we used decoupled single-neuron knockout analysis. For Hidden Layer 1 neurons (which receive both feedforward and recurrent input), intelligence and correction were measured separately: (a) intelligence importance was measured by zeroing only the feedforward incoming weights (W_ih1 column + bias), observing the drop in t=1 accuracy (Δacc_t1); (b) correction importance was measured by zeroing only the recurrent incoming weights (W_rec column), observing the drop in correction gain (Δgain). This decoupling prevents a confound where feedforward-critical neurons appear artificially important for correction simply because destroying their feedforward pathway also collapses the correction baseline. For Hidden Layer 2 neurons (which have no direct recurrent input), full knockout was used for both measures; we note that the intelligence-correction confound may still exist for these neurons. This analysis was performed on a single trained model (seed=0, noise=0.5) to generate a per-neuron importance heatmap.
+
+### 2.9 Statistical Design
+
+All experiments were conducted across 10 independently initialized models (seeds 0–9). Groups B1 and C1 were repeated 30 times per model with different ablation/permutation seeds. Group C2 paired each target model (seed 0–9) with an independently trained donor model (seed 100–109). The primary measure was **correction gain**: accuracy at t=3 minus accuracy at t=1. Secondary measures included recurrent contribution norm (||tanh(y_{t-1}/τ) · W_rec||) and step delta (||y_t − y_{t-1}||). For B1 and C1, the 30 repeats were averaged within each model before inference; the inferential unit is the model (N=10), not the repeat.
+
+The pairing structure differs by group type: Groups A, B1, C1, and C2 are post-hoc interventions on the same trained model (within-model pairing); Groups D, D', and D'' are separately trained seed-matched controls (matched-design pairing). B2 was excluded from the primary correction family a priori because its catastrophic feedforward degradation renders correction gain comparison uninformative. Under static input, D/D'/D'' produce gain = 0.000 by structural necessity (no recurrence, no new input); these are presented as structural controls confirming the task design, not as inferential tests, and are excluded from the Holm-Bonferroni family. The primary Holm-Bonferroni family for static-input comparisons thus consists of m = 4 tests: Baseline vs. {A, B1, C1, C2}. The secondary family (C1-vs-A and C2-vs-A) was pre-specified to test whether non-veridical feedback is worse than absent feedback.
+
+The mean train-test accuracy gap at t=3 was +0.040 (static) and +0.050 (variable noise), indicating modest overfitting consistent with the small sample size (200 training samples). Full per-seed gaps are reported in the supplement.
+
+Significance was assessed with exact Wilcoxon signed-rank tests on paired model-level means (2^10 = 1,024 sign assignments enumerated), with Holm-Bonferroni correction for the primary family of comparisons. 95% bootstrap confidence intervals (10,000 resamples, percentile method) are reported as descriptive summaries. For paired comparisons, the 10 model-level paired differences were resampled as a unit to preserve pairing structure; the exact Wilcoxon p-values are the primary inferential quantities. Noise level was set to 0.5 for the primary analysis, with a full sweep across [0.1, 0.2, 0.3, 0.5, 0.7, 1.0].
+
+### 2.10 Robustness Analysis
+
+To address potential concerns about parameter sensitivity, we conducted a hyperparameter sweep across 80 configurations: w1 ∈ {0.0, 0.1, 0.2, 0.3}, w2 ∈ {0.1, 0.2, 0.3, 0.5}, τ ∈ {1.0, 1.5, 2.0, 3.0, 5.0}, with 10 independent models per configuration (800 total experiments). For the purpose of mapping the grid, we used a lenient heuristic to flag configurations showing self-correction: mean gain > 0 with at least 60% of models showing positive gain. This criterion is deliberately liberal (a sign test at 6/10 yields p ≈ 0.38) and is intended only for exploratory grid characterization, not as a formal significance test; the primary statistical claims rest on the exact Wilcoxon tests reported in Section 3.
+
+-----
+
+## 3. Results
+
+### 3.1 Variable-Noise Task (Primary Experiment)
+
+Under variable noise (x_t = prototype + ε_t, independent per timestep), the Baseline model achieved a correction gain of **+0.151 ± 0.046** (mean ± SD, N=10), with a 95% bootstrap CI of [+0.121, +0.179]. This is numerically 3.6× larger (descriptive ratio; no formal cross-task comparison was conducted) than the static-input gain (+0.042), consistent with a greater benefit from iterative refinement when each timestep provides a new noisy observation of the same underlying pattern.
+
+**Group A (recurrent ablation)** produced gain = +0.008 ± 0.045 — not significantly different from zero (Wilcoxon signed-rank vs. 0: p = 0.754, 5/10 models positive). Under i.i.d. inputs, a stateless model has expected gain of zero by symmetry, so Group A's near-zero gain is the expected statistical baseline. The informative contrast is with the Baseline: the recurrent model achieves gain = +0.151 by accumulating evidence across timesteps — a capability that requires temporal integration through the feedback pathway.
+
+**Group C1 (shuffled feedback)** produced gain = −0.068 ± 0.087 (CI: [−0.123, −0.016]), replicating the fake mirror effect under variable noise.
+
+**Group C2 (clone feedback)** produced gain = −0.018 ± 0.100 (CI: [−0.074, +0.048]). While the CI includes zero for C2's own gain, the paired comparison against Baseline is maximally significant (T = 0.0, p = 0.002 raw, all 10 models show Baseline > C2).
+
+All three primary comparisons (Baseline vs. A, C1, C2) reached the resolution limit of the N=10 exact test (T = 0.0), with Holm-Bonferroni corrected p = 0.00586 for all three (m = 3 family; all three raw p = 0.001953, and Holm's monotonic step-down yields a common adjusted value). All significant at α = 0.01. Paired difference bootstrap CIs (10,000 resamples, percentile method on 10 model-level paired differences): Baseline − A = +0.143 [+0.110, +0.181], Baseline − C1 = +0.219 [+0.163, +0.278], Baseline − C2 = +0.168 [+0.124, +0.203]. Endpoint accuracies: Baseline t=1 = 0.685 ± 0.066, t=3 = 0.836 ± 0.074; Group A t=1 = 0.685 ± 0.066, t=3 = 0.694 ± 0.061.
+
+Under variable noise, the gain across noise levels peaked at noise = 0.5 (Baseline +0.151) and decreased at both extremes. Group A fluctuated around zero at all noise levels.
+
+### 3.2 Static-Input Results
+
+Under static input (the same noisy pattern repeated at every timestep), the Baseline achieved a correction gain of +0.042 ± 0.029 (CI: [+0.023, +0.059]). The primary inferential evidence comes from the VN results (§3.1); the static setting serves as the controlled special case where memory and self-correction are cleanly separated, enabling the exploratory mechanistic analyses in §3.7–3.11. Under static input, Group A gain = 0.000 is structurally guaranteed; the non-trivial findings are Baseline's positive gain (learned) and C1/C2's negative gain (active interference). Paired difference bootstrap CIs: Baseline − A = +0.042 [+0.023, +0.059], Baseline − C1 = +0.106 [+0.074, +0.139], Baseline − C2 = +0.101 [+0.062, +0.148].
+
+### 3.3 Ablation Results
+
+**Recurrent ablation (Group A)**: Correction gain dropped to exactly 0.000 ± 0.000 (structurally guaranteed under static input). Accuracy at t=1 was unchanged (0.698 ± 0.054), confirming the ablation targets only the correction mechanism. The paired Wilcoxon test against Baseline yielded corrected p = 0.064 (Holm-Bonferroni, m = 4); this marginally non-significant result reflects the small and variable Baseline gain under static input (1/10 models negative), not uncertainty about the ablation effect, which is structurally guaranteed. Under variable noise, where the comparison is empirically meaningful, all three primary comparisons are significant at p < 0.006 (§3.1). Recurrent contribution norm (2.163 → 0.000) and step delta (1.162 → 0.000) both dropped to zero.
+
+**Random ablation (Group B1)**: Mean gain = −0.004 ± 0.016. Accuracy at t=1 dropped substantially (0.515 ± 0.048), indicating general degradation. The correction mechanism was also lost, but this is confounded by the overall performance collapse.
+
+**Structured ablation (Group B2)**: The h2-to-output pathway ablation completely severed the hidden layers from the output, causing catastrophic degradation to chance-level accuracy (t=1 = 0.199 ± 0.032). This serves as a sanity check rather than a nuanced structural ablation: it confirms that destroying the entire predictive pathway is qualitatively different from the targeted recurrent ablation in Group A. B2 was excluded from the Holm-Bonferroni correction family for this reason.
+
+**Feedforward controls (Groups D, D’, D’’)**: Under static input, all three feedforward variants produced correction gain = 0.000 ± 0.000 (structurally guaranteed). Their t=1 accuracies — D: 0.746 ± 0.067, parameter-matched D’: 0.822 ± 0.031, compute-matched D’’ (6 layers): 0.600 ± 0.130 — show that additional parameters (D’) improve pattern recognition and additional depth (D’’) does not, but neither produces self-correction without recurrence. Under variable noise, D/D’/D’’ were retrained and still showed gain ≈ 0 (D: −0.011 ± 0.047, D’: −0.000 ± 0.032, D’’: +0.010 ± 0.035) — as expected for stateless models under i.i.d. inputs. Neither additional parameters (D’) nor additional computational depth (D’’) enable evidence accumulation without recurrent feedback.
+
+### 3.4 The Fake Mirror Effect
+
+Group C1 (permutation feedback) produced gain = −0.064 ± 0.048 (CI: [−0.095, −0.035]) — not merely zero, but significantly *negative*. Shuffled feedback actively degrades performance below the initial prediction, despite preserving the full recurrent architecture and feedback distribution.
+
+Group C2 (clone feedback) controls for the possibility that C1’s degradation is an OOD artifact: the clone’s output has valid marginal statistics but is not the model’s *own*. C2 produced comparable degradation: gain = −0.059 ± 0.069 (CI: [−0.102, −0.016], corrected p = 0.008). No significant difference between C1 and C2 was detected (p = 0.846, N = 10).
+
+Both C1 and C2 are significantly worse than Group A (no feedback, gain = 0.000) in the secondary comparison family: C1 vs A corrected p = 0.008, C2 vs A corrected p = 0.065 (marginally non-significant; raw p = 0.064). Non-veridical feedback actively degrades performance below the no-feedback baseline. We term this *learned feedback-contract specificity*: the recurrent weights are co-adapted to the model’s own output geometry, and foreign substitution — even with valid marginal statistics — degrades the correction mechanism. The boundary between model-specific contract violation and ordinary closed-loop co-adaptation remains an open question (§4.6).
+
+A data-matched clone (identical training data, different initialization) produced gain = −0.054 (p = 0.006 vs Baseline), confirming that the effect is driven by weight initialization trajectory, not data distribution. A cross-pairing analysis (100 donor-target pairings under VN) showed mean C2 gain = −0.043 ± 0.096, with substantial donor variance (per-target SD: 0.05–0.12).
+
+### 3.5 Noise Dependence
+
+Under static input, the correction gain varied with noise level, peaking at noise = 0.2 (gain ≈ +0.099) and declining at both lower and higher noise levels. At low noise (0.1), feedforward processing alone was sufficient, rendering self-correction unnecessary. At high noise (0.7–1.0), the signal was too degraded for correction to recover. The optimal zone — where self-correction provides the greatest advantage — occurs at intermediate difficulty: noise is high enough that initial predictions are frequently wrong but low enough that the underlying signal remains recoverable through iterative refinement.
+
+### 3.6 Feedback Interpolation
+
+The interpolation sweep (§2.6) revealed a smooth, monotonic relationship between self-feedback fidelity (α) and correction gain. There is no sharp threshold — degradation is smooth and roughly monotonic across the sampled α values, indicating that the feedback contract is "soft": the network degrades gracefully rather than collapsing suddenly.
+
+Key quantitative landmarks (mean across 10 models, noise = 0.5; evaluated on a held-out test set distinct from the primary ablation experiment, yielding a Baseline gain of +0.053 on this sample vs. +0.042 in §3.2 — the difference reflects sampling variance across test sets):
+
+- **α = 1.0** (pure self): gain = +0.053 [+0.019, +0.086] (Baseline on this test set)
+- **α = 0.5** (half self): zero: +0.053 [+0.026, +0.078], shuffle: +0.039 [+0.010, +0.068], clone: +0.031 [−0.001, +0.064] — still positive
+- **α = 0.2**: zero: +0.034 [+0.019, +0.048], shuffle: +0.001 [−0.024, +0.027], clone: −0.009 [−0.047, +0.030] — zero-crossing region
+- **α = 0.0** (no self): zero: 0.000, shuffle: −0.042 [−0.073, −0.008], clone: −0.038 [−0.081, +0.004]
+
+(All brackets are 95% bootstrap CIs, 10,000 resamples, N=10 models.)
+
+The zero-crossing occurs at approximately α ≈ 0.2 for Self–Shuffle and α ≈ 0.3 for Self–Clone, meaning the clone signal requires more self-feedback to overcome — consistent with structured misdirection being harder to compensate than incoherent noise. The Self–Zero curve plateaus around α ≈ 0.5, suggesting that ~50% self-feedback is sufficient for near-maximum correction.
+
+### 3.7 Mechanistic Analysis: Hidden-State Trajectories
+
+*The following mechanistic analyses (§3.7–3.11) exploit the glass-box transparency of the 35-neuron architecture. These are conducted on the static-input models, where the primary statistical evidence is weaker than under variable noise (§3.1); the mechanistic results should be interpreted as exploratory characterizations of the correction mechanism, not as independent confirmatory tests.*
+
+Across all 10 models (2,000 total test trials at noise = 0.5), trial classification revealed: corrected 236 (11.8%), stable correct 1,258 (62.9%), stable incorrect 376 (18.8%), over-corrected 130 (6.5%). The net gain (corrected minus over-corrected) is 106/2,000 = 5.3%, consistent with the Baseline gain (+0.042 on the primary test set; +0.053 on the mechanistic analysis test set, which shares the same held-out data as the interpolation experiment).
+
+PCA projection of Hidden Layer 1 activations (10-dim → 2-dim) reveals distinct trajectory patterns:
+
+- **Corrected trials** (Baseline): trajectories move toward class-appropriate regions between t=1 and t=3, consistent with the hidden state moving toward regions associated with correct classification.
+- **Over-corrected trials** (Baseline): trajectories move away from the correct region — the feedback signal is occasionally misleading even when it is the model's own output.
+- **C2 trials**: trajectories show comparable displacement magnitude but in misaligned directions, consistent with the clone feedback providing a coherent but incorrectly directed correction signal.
+
+### 3.8 Wrong-Trajectory Control
+
+To distinguish model-specific feedback-contract specificity from ordinary state-conditional mismatch, we tested whether the *same model's* output from a *different trial* (matched on predicted class and t=1 correctness; when multiple candidates matched, one was selected uniformly at random using a fixed seed for reproducibility) also degrades performance. Under static input, self-wrong-trial gain = +0.061 ± 0.061, nearly identical to self-current gain (+0.053, p = 0.49 for the difference), while clone gain = −0.039 ± 0.070. The key comparison — self-wrong-trial vs. clone — shows mean difference = +0.099 (p = 0.049, uncorrected; this exploratory comparison was not part of the pre-specified Holm family). Under variable noise, the pattern is stronger: self-wrong-trial gain = +0.138 ± 0.053 vs. clone gain = −0.018 ± 0.100, difference = +0.156 (p = 0.002, uncorrected; consistent across all 10 model pairs). This suggests that foreign-model identity, not merely state-conditional mismatch, contributes to the C2 degradation: the network tolerates its own output from the wrong trial but not another model's output.
+
+### 3.9 Mechanistic Analysis: Clone Feedback Geometry
+
+The cosine divergence between self and clone feedback W_rec contributions at t=2 averaged 0.734 ± 0.485 across all 2,000 trials. To contextualize this value, we computed null baselines: isotropic norm-matched random vectors produced mean divergence = 1.001 ± 0.053, same-class resampled self-feedback produced mean divergence = 0.361 ± 0.428, and clone feedback produced 0.734 ± 0.485. The ordering — Resampled (0.361) < Clone (0.734) < Random (1.001) — reveals that clone feedback is more aligned than random noise but substantially less aligned than same-model same-class feedback. This contextualizes the 0.73 value as representing partial but insufficient alignment: the clone shares some structural similarity with the model's own output (they trained on similar tasks) but lacks the model-specific geometric properties needed for effective correction.
+
+At the seed level, higher mean clone divergence correlated with lower C2 gain (Spearman ρ = −0.61, p = 0.062, N = 10), directionally consistent with angular misalignment as a contributing mechanism. The clone's output activates W_rec in a direction that is angularly misaligned with what the model's learned correction strategy expects. This divergence operates at the continuous logit level, not at the discrete class level — even when self and clone outputs agree on the predicted class (same argmax), their continuous vectors produce meaningfully different W_rec contributions.
+
+To test whether this geometric misalignment is linearly correctable, we fitted a learned affine transform (W ∈ ℝ^{5×5}, b ∈ ℝ^5; 30 parameters) from donor logits to target logits on calibration data (training set, 200 samples × 3 timesteps) and re-evaluated C2 gain on the held-out test set. The alignment quality was moderate (R² = 0.449 ± 0.053 static, 0.465 ± 0.104 VN), confirming that the donor-to-target logit mapping is substantially non-linear. The affine-aligned C2 condition recovered a significant portion of the lost gain — static: C2-raw = −0.059, C2-aligned = +0.010, recovering 68% of the Baseline-to-C2 gap; VN: C2-raw = −0.030, C2-aligned = +0.062, recovering 54% — but remained significantly below Baseline in both settings (static: p = 0.039; VN: p = 0.006, Holm-Bonferroni corrected). The improvement from raw to aligned C2 was also significant (static: p = 0.031; VN: p = 0.037). This quantitative decomposition indicates that approximately 60% of C2 degradation reflects linear representation misalignment (recoverable by affine transform), while the remaining ~40% reflects non-linear, model-specific geometric incompatibility that persists even after optimal linear alignment.
+
+### 3.10 W_rec Structural Analysis
+
+The recurrent weight matrix W_rec (5×10, output → hidden layer 1) showed moderate structural consistency across the 10 independently trained models: mean sign consistency = 0.614, minimum = 0.300. This indicates that W_rec is neither fully interpretable (consistent across seeds) nor fully distributed (random across seeds), but occupies an intermediate regime where certain output-to-hidden connections are robustly signed while others depend on the specific training trajectory. This partial consistency is itself informative: it suggests that multiple distinct W_rec configurations can implement effective self-correction, supporting the view that feedback-contract specificity operates at the model level rather than reflecting a single universal correction algorithm. No Hidden Layer 1 neurons became permanently inactive under Group A ablation across all 10 models; activation fractions shifted by at most 12.3 percentage points (h1_9: 60.7% → 73.0%), confirming that the ablation does not confound recurrent-pathway removal with ReLU dead-zone effects.
+
+### 3.11 Neuron Overlap Analysis (Exploratory)
+
+Decoupled neuron importance analysis of Hidden Layer 1 (performed on a single model, seed=0) — where feedforward and recurrent contributions can be cleanly separated — revealed three functional groups: neurons important primarily for initial pattern recognition (intelligence-specialized, e.g., h1_6), neurons whose recurrent input contributes primarily to self-correction (correction-specialized, e.g., h1_8), and neurons important for both (shared, e.g., h1_1, h1_5, h1_7). Notably, h1_9 showed *negative* correction importance (−0.035): removing its recurrent input *improved* correction gain, suggesting that not all recurrent channels contribute positively. For Hidden Layer 2 (where decoupling is not possible without timestep masking), full knockout was used; the intelligence-correction confound should be noted when interpreting these values.
+
+### 3.12 Robustness
+
+The hyperparameter sweep confirmed that self-correction is broadly observed within the explored grid: 54 of 80 configurations (68%) met the lenient heuristic defined in Section 2.10. The primary determinant was w1 (t=1 loss weight): self-correction developed in 95% of configurations with w1 = 0.0, 90% with w1 = 0.1, 75% with w1 = 0.2, and only 10% with w1 = 0.3. Temperature τ was secondary: self-correction was stable across τ ∈ [1.0, 3.0] and degraded only at τ = 5.0. The t=2 weight w2 had negligible effect across its full range.
+
+The reported experimental configuration (w1 = 0.0, w2 = 0.2, τ = 2.0) ranked 8th out of 80 configurations by mean gain (top 10%). The top configuration (w1 = 0.0, w2 = 0.1, τ = 1.0) achieved gain = +0.054. This suggests the main effect is not confined to a narrow hyperparameter setting within the explored grid.
+
+A targeted VN hyperparameter sweep (w1 ∈ {0.0, 0.1, 0.2, 0.3}, τ ∈ {1.0, 1.5, 2.0, 3.0}, w2 = 0.2 fixed; 16 configurations × 10 seeds = 160 runs) showed dramatically higher robustness: 16/16 (100%) configurations met the emergence criterion, compared to 68% under static input. Unlike the static sweep where w1 was the dominant factor, under VN all w1 values produced 100% emergence with gains ranging from +0.109 to +0.159. This suggests that per-timestep noise variation provides a stronger learning signal for self-correction than the time-weighted loss alone, reducing sensitivity to hyperparameter choice (see figure: sweep_vn_heatmap.png).
+
+### 3.13 Training Dynamics
+
+To reveal when the feedback contract forms during training, we evaluated Baseline, C1, and C2 correction gain at 11 checkpoints (epoch 0–500) across all 10 models. The contract develops gradually, not abruptly: Baseline gain rises from ~0 at epoch 0 to its final value over ~200 epochs, with no sharp phase transition. C1 (shuffled feedback) gain tracks inversely — as self-correction develops, vulnerability to misaligned feedback increases in parallel (static C1: +0.018 at epoch 0 → −0.042 at epoch 500). C2 (clone feedback) harm emerges later than C1 (static C2 turns negative around epoch 100), suggesting that model-specific output geometry takes longer to differentiate than the basic correction mechanism takes to form. Under VN, the same temporal ordering holds with stronger effect sizes.
+
+### 3.14 Timestep Extension
+
+To test whether self-correction converges or diverges beyond the training horizon, we extended evaluation to T ∈ {3, 5, 7, 10, 15, 20} on trained models (no retraining). Under both static and variable-noise settings, Baseline accuracy peaked at T=3 and stabilized thereafter (static: 0.749 at T=3, 0.741 at T=20; VN: 0.854 at T=3, 0.832 at T=20; evaluated on the timestep-extension test set), consistent with a stable performance plateau over the tested horizons rather than continued refinement or divergence (see figure: fig_timestep_extension.png). Group A remained flat across all timesteps, confirming no correction without recurrence. Groups C1 and C2 showed slight further degradation at higher T (C1 static: 0.650→0.644; C1 VN: 0.630→0.615), confirming that non-veridical feedback compounds rather than self-corrects over additional timesteps.
+
+### 3.15 Scale Verification
+
+To verify that self-correction is not an artifact of the 35-neuron architecture, we tested four hidden-layer widths (10, 20, 45, 245; parameter counts ~325 to 65,420) on the fixed 5-class task under both static and VN settings. Self-correction (positive Baseline gain) was observed at all scales in both settings (static: +0.053 to +0.033; VN: +0.146 to +0.149). Group A gain was ≈ 0 at all scales. The C1 fake mirror effect (shuffled feedback is harmful) persisted universally, growing stronger at larger scales (static C1 gain: −0.044 at h=10 to −0.259 at h=245; see figure: fig_scale_verification.png).
+
+C2 (clone feedback) showed a scale-dependent pattern: harmful at small scales (h=10: −0.030, h=20: −0.091 under static) but neutral or slightly beneficial at larger scales under variable noise (h=45: +0.032, h=245: +0.060). This suggests that as model capacity increases, independently trained models may develop more similar output geometries at larger scale, partially satisfying each other's feedback contracts. This scale dependence provides indirect evidence for feedback-contract specificity: at small scales where representations diverge more across random initializations, foreign feedback is harmful; at larger scales where representations converge, it becomes tolerable.
+
+### 3.16 MNIST Extension
+
+To test whether the core findings generalize beyond the synthetic 5-class task, we replicated the experiment on MNIST (10-class, 784-dimensional input) using the same RecurrentMLP architecture scaled to Input(784) → H1(128) → H2(128) → Output(10) with output→hidden feedback (~130k parameters). Ten target models (seeds 0–9) and ten donors (seeds 100–109) were trained for 30 epochs with SGD (lr=0.01) under variable noise (σ = 0.5, T = 3) with the same time-weighted loss (w1 = 0.0, w2 = 0.2).
+
+Self-correction replicated: Baseline gain = +0.021 ± 0.003 (all 10 models positive, p = 0.002 vs. Group A). Group A gain = −0.001 ± 0.002 — removing recurrent feedback eliminated correction. The C1 fake mirror effect also replicated clearly: C1 gain = −0.019 ± 0.018 (p = 0.002 vs. Baseline), confirming that shuffled feedback is actively harmful even on a real-world dataset.
+
+C2 (clone feedback) showed gain = +0.006 ± 0.007 — positive, unlike the negative C2 gain observed in the 35-neuron model. Clone feedback was not harmful on MNIST but was still significantly worse than self-feedback (Baseline − C2 = +0.015, p = 0.002). This is consistent with the scale-dependent C2 pattern observed in §3.15: at 130k parameters, independently trained models develop sufficiently similar representations that clone feedback provides partial but suboptimal correction. The dissociation between C1 (harmful) and C2 (suboptimal but not harmful) at this scale is itself informative — it demonstrates that the fake mirror effect is driven by coordinate disruption (C1), not merely by foreign-model identity (C2).
+
+Training dynamics on MNIST reveal a contrast with the 35-neuron model: self-correction emerges within the first epoch (Baseline gain +0.012 at epoch 1) and C1 harm appears simultaneously (−0.016), whereas in the 35-neuron model both develop over ~200 epochs. Most notably, C2 is initially harmful at epoch 1 (−0.035) but recovers to positive by epoch 3 as model representations converge during training. This inverted C2 trajectory — harmful early, tolerable late — provides direct evidence that feedback-contract specificity reflects representation divergence between models, which is maximal in early training and diminishes as models converge toward similar solutions.
+
+-----
+
+## 4. Discussion
+
+### 4.1 Induction Depends on Conditions, Not Merely Scale
+
+Self-correction developed in a network of 35 neurons — orders of magnitude smaller than systems where iterative refinement is typically studied. What mattered was not scale but two learning conditions: temporal freedom and gradient flow through the feedback pathway. Under VN, Group A gain ≈ 0 (p = 0.754) is the expected statistical baseline for a stateless model under i.i.d. inputs; the informative result is the Baseline's gain of +0.151, demonstrating evidence accumulation through recurrent feedback.
+
+One might argue that VN self-correction is simply Bayesian evidence accumulation. The VN setting does provide independent observations that a temporal integrator can exploit, and the larger VN gain (+0.151 vs. +0.042 static) is consistent with an evidence-accumulation component. The key point is that this accumulation requires a mechanism for temporal integration: stateless models (Group A, D, D', D'') have expected gain of zero under i.i.d. inputs and show gain ≈ 0 empirically. VN self-correction likely involves both evidence accumulation and error revision, both of which depend on recurrent self-reference in our setting.
+
+### 4.2 The Fake Mirror Is Worse Than No Mirror
+
+The “fake mirror” effect — non-veridical feedback degrades performance below the no-feedback baseline — is clearly demonstrated under static input (C1 vs A: corrected p = 0.008; C2 vs A: corrected p = 0.065, marginally non-significant) and directionally consistent under VN. C2 harm attenuates under VN (−0.018 vs. −0.059 under static), likely because the clone’s output varies across timesteps in response to different noise realizations, producing less systematic misdirection. This suggests that the feedback contract’s influence scales with the network’s reliance on self-generated signals.
+
+An important caveat is that the C2 clone-feedback effect is scale-dependent. At hidden width ≥ 45 under variable noise, clone feedback becomes neutral or slightly positive (§3.15), and on MNIST (130k parameters) C2 gain is positive though still significantly below self-feedback (§3.16). This pattern is itself consistent with feedback-contract specificity: at small scales where independently trained models develop more divergent representations, foreign feedback violates the learned contract; at larger scales where representations converge, the contract is partially satisfied. The core phenomena — self-correction, the C1 fake mirror effect, and the superiority of self-feedback over clone feedback — persist at all tested scales.
+
+The interpolation sweep (§3.6) extends this to a continuous mapping: smooth degradation with zero-crossing at α ≈ 0.2–0.3 reveals a “soft” feedback contract. The mechanistic analysis (§3.9) provides geometric evidence: self and clone W_rec contributions diverge by 0.73 (vs. 0.36 for same-class resampled self, 1.00 for random), and higher divergence correlates with greater C2 degradation (ρ = −0.61, p = 0.062). This divergence persists even when self and clone agree on the predicted class, indicating that feedback-contract specificity operates at the continuous geometry level. Moderate W_rec sign consistency across seeds (0.614) suggests that each model develops a distinct geometric signature for interpreting feedback. The affine alignment control (§3.9) provides a quantitative decomposition: approximately 60% of C2 degradation is attributable to linear representation misalignment (recoverable by a learned affine transform), while the remaining ~40% persists after optimal linear correction — confirming that feedback-contract specificity has a genuinely non-linear component beyond simple covariate shift.
+
+### 4.3 Implications for AI Systems
+
+Extrapolation from toy models to billion-parameter systems requires caution, but the MNIST extension (§3.16) provides a partial bridge: self-correction and the C1 fake mirror effect replicate at 130k parameters on a real-world dataset. The C2 effect is scale-dependent — harmful at small scales, suboptimal but not harmful at MNIST scale — suggesting that feedback-contract specificity is strongest when model representations are most individualized. The core finding that recurrent self-reference is necessary for correction (Group A ≈ 0 in all settings) is consistent with theoretical arguments that self-referential structure is representationally necessary for certain forms of meta-learning (Kirsch and Schmidhuber, 2022). The C1 result — that misaligned feedback is worse than no feedback — is a cautionary observation for any system that trains on external signals as if they were self-generated: feedback that deviates from the model's own output geometry may actively degrade rather than merely fail to improve. Whether this applies to RLHF or preference-based training at scale is an open empirical question that this minimal study cannot answer, but the direction of the effect is consistent across all scales we tested. A natural next step would be testing whether distillation from a foreign reward model produces measurably different alignment dynamics than self-generated reward, adapting the interpolation methodology (§2.6) to the RLHF setting.
+
+### 4.4 Connection to Biological Metacognition
+
+The partially overlapping neurons serving both pattern recognition and self-correction in our model bear a surface-level resemblance to overlapping monitoring and control circuits in prefrontal cortex (Morales et al., 2018). However, this analysis was exploratory (single model, seed=0) and the toy setting precludes strong conclusions about biological relevance.
+
+### 4.5 Relationship to Chain-of-Thought and Test-Time Compute
+
+Our time-weighted loss is analogous in one respect to Chain-of-Thought prompting (Wei et al., 2022): both reduce pressure on intermediate computation steps, granting the model additional processing without penalizing intermediate exploration. Unlike PonderNet or ACT, our approach requires no explicit halting mechanism — only a loss reweighting.
+
+### 4.6 Limitations
+
+1. **Induced, not spontaneous.** Self-correction was induced by the time-weighted loss, which explicitly removes penalty for early errors. This is a learned behavior requiring specific training conditions, not a spontaneous capability.
+
+2. **Toy system.** Thirty-five neurons performing pattern classification cannot capture the complexity of language or reasoning. The variable-noise task adds ecological validity but does not replicate the entangled memory-and-correction demands of autoregressive systems. The value of our experiment lies in its mechanistic transparency, not its ecological validity. The Hodgkin–Huxley analogy (§1.2) is intended methodologically: the value of the preparation lies in enabling measurement techniques, not in claiming that 35-neuron dynamics will recapitulate in all larger systems. The MNIST extension (§3.16) provides a partial bridge, but a substantial gap remains between 130k parameters and the scales at which iterative refinement is practically deployed.
+
+3. **Modest effect size.** The correction gain (+0.042 static, +0.151 variable noise) is small in absolute terms. The parameter-matched feedforward model (D’) achieves higher absolute accuracy (0.822) than the recurrent Baseline at t=3 (0.739), representing a different computational trade-off: one-shot optimization vs. progressive refinement through self-reference. Under capacity constraints where single-pass accuracy is insufficient, the recurrent strategy may prove essential.
+
+4. **Mechanistic specificity.** The mechanistic analysis (trajectory visualization, W_rec dissection, cosine divergence) is specific to this 35-neuron architecture. Whether the same geometric signatures of feedback-contract specificity appear in larger recurrent architectures is untested.
+
+5. **Statistical power.** N=10 models bounds the minimum achievable p-value (~0.002 before correction), limiting detection of subtle effect-size differences — for example, the C1-vs-C2 and C2-vs-zero comparisons under variable noise. The interpolation sweep partially compensates by providing continuous evidence, but individual point comparisons remain power-limited.
+
+6. **Partial alignment recovery.** The learned affine alignment control (§3.9) recovers ~60% of C2 degradation, indicating that a substantial portion of clone-feedback harm at the 35-neuron scale reflects linear representation misalignment rather than deeper geometric incompatibility. The remaining ~40% persists after optimal linear correction (p < 0.01 under VN), but whether a non-linear alignment (e.g., a small neural network mapping donor logits to target logits) would recover more remains untested. If non-linear alignment fully rescues performance, feedback-contract specificity reduces entirely to representation divergence — still a valid finding, but a weaker claim than model-specific geometric incompatibility.
+
+-----
+
+## 5. Conclusion
+
+In a 35-neuron recurrent network, we have mechanistically dissected learned feedback-contract specificity — the co-adaptation of recurrent weights to a model’s own output geometry. Six lines of evidence converge:
+
+1. **Variable-noise task** provides independent noisy observations at each timestep, enabling evidence accumulation: the recurrent Baseline achieves gain = +0.151, while Group A (gain ≈ 0, as expected for a stateless model under i.i.d. inputs) and stateless feedforward controls confirm that input variation alone, without recurrent feedback, is insufficient.
+
+2. **Feedback interpolation** maps a smooth, monotonic degradation from full self-feedback (gain = +0.053) to full contamination (gain ≤ 0), with the zero-crossing at α ≈ 0.2–0.3 — indicating a soft but model-specific feedback contract.
+
+3. **Hidden-state trajectory analysis, wrong-trajectory control, and affine alignment** show corrected trials converging toward class centroids under self-feedback but diverging under clone feedback, with mean cosine divergence of 0.73 (0.36 resampled self, 1.00 random). The wrong-trajectory control confirms that the degradation is model-specific: same-model different-trial feedback preserves correction (p = 0.002 under VN), while foreign-model feedback degrades it. A learned affine alignment recovers ~60% of the C2 degradation but leaves a significant residual (p < 0.01 under VN), decomposing the feedback contract into a linearly correctable component (~60%) and a non-linear model-specific residual (~40%).
+
+4. **Ablation and control experiments** confirm that neither parameters (D’), computational depth (D’’), nor valid-but-foreign feedback (C2) can substitute for the model’s own output. These findings hold across 68% of 80 static hyperparameter configurations and 100% of 16 VN configurations.
+
+5. **Scale verification** across hidden widths 10–245 confirms that self-correction and the C1 fake mirror effect persist regardless of model capacity. C2 clone feedback shows scale-dependent harm — negative at small scales, neutral at large scales under variable noise — consistent with representation convergence at higher capacity.
+
+6. **MNIST extension** (784-dim input, 130k parameters, 10-class) replicates self-correction (+0.021) and the C1 fake mirror effect (−0.019), while C2 clone feedback is suboptimal but not harmful (+0.006), consistent with the scale-dependent pattern.
+
+The central finding is that feedback utility is graded by geometric compatibility: self-feedback produces the largest correction, clone feedback is intermediate (with the gap modulated by representation convergence across scale), and shuffled feedback actively degrades performance. This graded structure — not a binary “works/doesn't work” — provides a candidate diagnostic for studying output-feedback processing in neural systems. We offer these results as a mechanistic case study from a fully transparent minimal model. Whether the same feedback-fidelity dependence manifests in large-scale systems trained with external feedback signals — where the gap between the feedback source and the model's own output geometry may be substantial — is a question for larger-scale studies than this independent effort can provide.
+
+-----
+
+## Data Availability
+
+All code, data, and analysis scripts will be publicly released upon acceptance. The experiment is implemented in pure NumPy and can be reproduced on a standard multi-core desktop computer. The core experiments (static and variable-noise ablation) complete in under one hour; the full pipeline including hyperparameter sweeps and mechanistic analyses requires approximately 4–6 hours with parallelization. Raw experimental data (12,850 rows across 12 CSV files covering all conditions) are included.
+
+-----
+
+## Author Contributions
+
+The author designed and implemented all experiments, executed all analyses, and wrote the manuscript.
+
+-----
+
+## Acknowledgments
+
+The experimental design was iteratively refined through structured dialogue with large language models — Claude Opus 4.6 (Anthropic), GPT-5.4 Pro (OpenAI), and Gemini Deep Think (Google) — which served as critical reviewers identifying methodological gaps and suggesting additional controls. The author takes full responsibility for all scientific claims and interpretations.
+
+-----
+
+## Conflict of Interest
+
+The author declares no conflict of interest. This research was conducted independently without institutional or corporate funding.
+
+-----
+
+## Ethics Statement
+
+This work studies fundamental mechanisms of iterative refinement in a minimal artificial neural network. The system is a 35-neuron toy model performing synthetic pattern classification; it has no direct real-world application and poses no foreseeable societal risk. The research may contribute to longer-term understanding of self-referential processing in AI systems, which is relevant to AI safety and alignment research. No human subjects were involved. All experiments are fully reproducible from the publicly available code and data.
+
+-----
+
+## References
+
+Banino, A., Balaguer, J., & Blundell, C. (2021). PonderNet: Learning to Ponder. *arXiv preprint arXiv:2107.05407*.
+
+Fleming, S. M., & Dolan, R. J. (2012). The neural basis of metacognitive ability. *Philosophical Transactions of the Royal Society B, 367*(1594), 1338–1349.
+
+Gold, J. I., & Shadlen, M. N. (2007). The neural basis of decision making. *Annual Review of Neuroscience, 30*, 535–574.
+
+Graves, A. (2016). Adaptive Computation Time for Recurrent Neural Networks. *arXiv preprint arXiv:1603.08983*.
+
+Jaeger, H. (2001). The "echo state" approach to analysing and training recurrent neural networks. *GMD Report 148*.
+
+Kirsch, L., & Schmidhuber, J. (2022). Eliminating Meta Optimization Through Self-Referential Meta Learning. *arXiv preprint arXiv:2212.14392*.
+
+Li, J.-A., Benna, M. K., & Mattar, M. G. (2025). Discovering cognitive strategies with tiny recurrent neural networks. *Nature, 644*(8078), 993–1001.
+
+Maass, W., Natschläger, T., & Markram, H. (2002). Real-time computing without stable states. *Neural Computation, 14*(11), 2531–2560.
+
+Ma, H., Lu, W., & Feng, J. (2025). Spontaneous emergence of metacognition in neuronal computation. *Physical Review Research, 7*(3), 033188.
+
+Marino, J., Yue, Y., & Mandt, S. (2018). Iterative Amortized Inference. *Proceedings of ICML*, 3403–3412.
+
+Morales, J., Lau, H., & Fleming, S. M. (2018). Domain-general and domain-specific patterns of activity supporting metacognition in human prefrontal cortex. *Journal of Neuroscience, 38*(14), 3534–3546.
+
+Sussillo, D., & Barak, O. (2013). Opening the black box: Low-dimensional dynamics in high-dimensional recurrent neural networks. *Neural Computation, 25*(3), 626–649.
+
+Wei, J., Wang, X., Schuurmans, D., et al. (2022). Chain-of-Thought Prompting Elicits Reasoning in Large Language Models. *Advances in Neural Information Processing Systems, 35*.
+
+Yamato, Y., Suzuki, R., & Arita, T. (2022). Evolution of metamemory based on self-reference to own memory in artificial neural network with neuromodulation. *Scientific Reports, 12*(1), 6233.

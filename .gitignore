@@ -1,0 +1,55 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+
+# Pytest
+.pytest_cache/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Internal notes and working documents (not for publication)
+emergence-suggestion.txt
+hyperparameter sweep.txt
+generate_source_tree.py
+generate_review_package.py
+build_source_tree.py
+build_review_package.py
+source_tree.md
+CLAUDE.md
+FEEDBACK_paper.md
+plan.md
+REVIEW_PACKAGE.md
+REFERENCES_URLS.md
+UNDERSTANDING_GUIDE.md
+TODO.md
+
+# LaTeX build artifacts
+paper/*.aux
+paper/*.bbl
+paper/*.blg
+paper/*.log
+paper/*.out
+paper/*.synctex*
+paper/*.fls
+paper/*.fdb_latexmk
+paper/tmlr.sty
+paper/tmlr.bst
+paper/tmlr.cls
+
+# Claude Code
+.claude/
+results_archive/
+main.log
+supplementary_review_concerns.md
